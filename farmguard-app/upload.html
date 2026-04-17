@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload Documents | FarmGuard</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <!-- TOPBAR -->
+  <nav class="topbar">
+    <div class="topbar-inner">
+      <a href="/dashboard.html" class="topbar-logo">
+        <img src="/assets/farmguard-logo.svg" alt="FarmGuard">
+      </a>
+      <div class="topbar-right">
+        <a href="/dashboard.html" class="btn btn-outline btn-sm">Back to Dashboard</a>
+      </div>
+    </div>
+  </nav>
+
+  <div style="max-width:700px; margin:0 auto; padding:32px 20px;">
+    <!-- WIZARD PROGRESS -->
+    <div class="wizard-steps">
+      <div class="wizard-step">
+        <div class="wizard-dot active">1</div>
+        <div class="wizard-label">Upload<br>Documents</div>
+      </div>
+      <div class="wizard-line"></div>
+      <div class="wizard-step">
+        <div class="wizard-dot pending">2</div>
+        <div class="wizard-label">Answer<br>Questions</div>
+      </div>
+      <div class="wizard-line"></div>
+      <div class="wizard-step">
+        <div class="wizard-dot pending">3</div>
+        <div class="wizard-label">Review &<br>Submit</div>
+      </div>
+    </div>
+
+    <h1 style="font-size:28px; color:var(--green-dark); margin-bottom:8px;">Upload Your Policy Documents</h1>
+    <p style="font-size:16px; color:var(--text-mid); margin-bottom:8px;">
+      Upload your current crop insurance documents so we can review them. The more you provide, the more thorough our audit will be.
+    </p>
+    <p id="auditIdLabel" style="font-size:14px; color:var(--text-light); margin-bottom:28px;"></p>
+
+    <div id="alertArea"></div>
+
+    <!-- REQUIRED DOCUMENTS -->
+    <div class="card" style="margin-bottom:20px;">
+      <h2 style="font-size:18px; color:var(--green-dark); margin-bottom:4px;">Required Documents</h2>
+      <p style="font-size:14px; color:var(--text-mid); margin-bottom:16px;">We need at minimum your policy declarations page. You can get these from your insurance agent.</p>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <div style="display:flex; align-items:center; gap:10px; font-size:15px;">
+          <span id="checkDeclarations" style="font-size:20px; color:#E0E0D8;">&#9675;</span>
+          <span><strong>Policy Declarations Page</strong> &mdash; shows your coverage levels, crops, and premium</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px; font-size:15px;">
+          <span id="checkSchedule" style="font-size:20px; color:#E0E0D8;">&#9675;</span>
+          <span><strong>Schedule of Insurance</strong> &mdash; lists each crop unit, acres, and coverage details</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- HELPFUL DOCUMENTS -->
+    <div class="card" style="margin-bottom:24px;">
+      <h2 style="font-size:18px; color:var(--green-dark); margin-bottom:4px;">Helpful (Optional)</h2>
+      <p style="font-size:14px; color:var(--text-mid); margin-bottom:12px;">These help us provide a deeper analysis.</p>
+      <div style="display:flex; flex-direction:column; gap:8px; font-size:14px; color:var(--text-mid);">
+        <div>&#8226; Endorsements or riders</div>
+        <div>&#8226; APH (Actual Production History) records</div>
+        <div>&#8226; Previous year's policy for comparison</div>
+        <div>&#8226; Any correspondence from your agent about coverage changes</div>
+      </div>
+    </div>
+
+    <!-- UPLOAD ZONE -->
+    <div class="upload-zone" id="uploadZone">
+      <div class="upload-icon">&#128228;</div>
+      <h3>Drag & drop your files here</h3>
+      <p>PDF, images (JPG, PNG), or Word documents up to 25MB each</p>
+      <div class="upload-or">or</div>
+      <button type="button" class="btn btn-primary" id="browseBtn">Browse Files</button>
+      <input type="file" id="fileInput" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.tiff,.tif" style="display:none;">
+
+      <!-- Mobile camera button -->
+      <div class="camera-btn" id="cameraBtnWrap">
+        <div class="upload-or">or</div>
+        <button type="button" class="btn btn-outline" id="cameraBtn">&#128247; Take a Photo</button>
+        <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none;">
+      </div>
+    </div>
+
+    <!-- FILE LIST -->
+    <div class="file-list" id="fileList"></div>
+
+    <!-- ACTIONS -->
+    <div style="display:flex; gap:12px; margin-top:28px; justify-content:space-between; align-items:center;">
+      <a href="/dashboard.html" style="font-size:14px; color:var(--text-light);">Save & come back later</a>
+      <button class="btn btn-primary btn-lg" id="nextBtn" disabled>
+        Continue to Questions &#8594;
+      </button>
+    </div>
+  </div>
+
+  <script src="/js/supabase-config.js"></script>
+  <script>
+    let currentUser = null;
+    let auditId = null;
+    let auditData = null;
+    let uploadedFiles = [];
+
+    // Get audit ID from URL
+    const params = new URLSearchParams(window.location.search);
+    auditId = params.get('audit');
+
+    async function init() {
+      currentUser = await requireAuth();
+      if (!currentUser || !auditId) {
+        window.location.href = '/dashboard.html';
+        return;
+      }
+
+      // Load audit data
+      try {
+        auditData = await getAudit(auditId);
+        document.getElementById('auditIdLabel').textContent = 'Audit ' + auditData.audit_id + ' \u2022 ' + (auditData.farm_name || '');
+      } catch (err) {
+        window.location.href = '/dashboard.html';
+        return;
+      }
+
+      // Load existing documents
+      const existingDocs = await getAuditDocuments(auditId);
+      existingDocs.forEach(doc => {
+        uploadedFiles.push({ id: doc.id, name: doc.file_name, size: doc.file_size, path: doc.file_path, uploaded: true });
+      });
+      renderFileList();
+
+      // Detect mobile for camera button
+      if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
+        document.getElementById('cameraBtnWrap').style.display = 'block';
+      }
+    }
+
+    // ===================== DRAG & DROP =====================
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const cameraInput = document.getElementById('cameraInput');
+
+    uploadZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadZone.classList.add('dragover');
+    });
+    uploadZone.addEventListener('dragleave', () => {
+      uploadZone.classList.remove('dragover');
+    });
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      handleFiles(e.dataTransfer.files);
+    });
+
+    document.getElementById('browseBtn').addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => handleFiles(fileInput.files));
+
+    document.getElementById('cameraBtn').addEventListener('click', () => cameraInput.click());
+    cameraInput.addEventListener('change', () => handleFiles(cameraInput.files));
+
+    // ===================== FILE HANDLING =====================
+    const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/tiff',
+      'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const MAX_SIZE = 25 * 1024 * 1024; // 25MB
+
+    async function handleFiles(fileList) {
+      for (const file of fileList) {
+        // Validate type
+        if (!ALLOWED_TYPES.includes(file.type) && !file.name.match(/\.(pdf|jpg|jpeg|png|doc|docx|tiff|tif)$/i)) {
+          showAlert(document.getElementById('alertArea'), 'error',
+            `"${file.name}" is not a supported file type. Please upload PDF, image, or Word documents.`);
+          continue;
+        }
+        // Validate size
+        if (file.size > MAX_SIZE) {
+          showAlert(document.getElementById('alertArea'), 'error',
+            `"${file.name}" is too large (${formatFileSize(file.size)}). Maximum size is 25MB.`);
+          continue;
+        }
+        // Check duplicate
+        if (uploadedFiles.some(f => f.name === file.name && f.size === file.size)) {
+          showAlert(document.getElementById('alertArea'), 'warning', `"${file.name}" has already been uploaded.`);
+          continue;
+        }
+
+        // Add to list with uploading state
+        const tempId = 'temp-' + Date.now() + '-' + Math.random();
+        uploadedFiles.push({ tempId, name: file.name, size: file.size, uploading: true, progress: 0 });
+        renderFileList();
+
+        // Upload to Supabase
+        try {
+          const docRecord = await uploadDocument(auditId, file);
+          // Update temp entry with real data
+          const idx = uploadedFiles.findIndex(f => f.tempId === tempId);
+          if (idx >= 0) {
+            uploadedFiles[idx] = { id: docRecord.id, name: docRecord.file_name, size: docRecord.file_size, path: docRecord.file_path, uploaded: true };
+          }
+          renderFileList();
+        } catch (err) {
+          // Remove failed upload
+          uploadedFiles = uploadedFiles.filter(f => f.tempId !== tempId);
+          renderFileList();
+          showAlert(document.getElementById('alertArea'), 'error', `Failed to upload "${file.name}": ${err.message}`);
+        }
+      }
+
+      // Reset file inputs
+      fileInput.value = '';
+      cameraInput.value = '';
+    }
+
+    function renderFileList() {
+      const container = document.getElementById('fileList');
+      if (uploadedFiles.length === 0) {
+        container.innerHTML = '';
+        document.getElementById('nextBtn').disabled = true;
+        return;
+      }
+
+      document.getElementById('nextBtn').disabled = false;
+
+      container.innerHTML = uploadedFiles.map((f, i) => `
+        <div class="file-item">
+          <div class="file-info">
+            <span class="file-icon">${getFileIcon(f.name)}</span>
+            <div>
+              <div class="file-name">${f.name}</div>
+              <div class="file-size">${formatFileSize(f.size)}${f.uploading ? ' \u2022 Uploading...' : ' \u2022 Uploaded'}</div>
+              ${f.uploading ? '<div class="file-progress"><div class="file-progress-bar" style="width:60%"></div></div>' : ''}
+            </div>
+          </div>
+          ${f.uploaded ? `<button class="file-remove" onclick="removeFile(${i})" title="Remove">&times;</button>` : ''}
+        </div>
+      `).join('');
+
+      // Update requirement checks
+      const names = uploadedFiles.map(f => f.name.toLowerCase()).join(' ');
+      document.getElementById('checkDeclarations').innerHTML = (names.includes('decl') || names.includes('policy') || uploadedFiles.length >= 1)
+        ? '<span style="color:var(--green-mid);">&#10003;</span>' : '&#9675;';
+      document.getElementById('checkSchedule').innerHTML = (names.includes('schedule') || names.includes('soi') || uploadedFiles.length >= 2)
+        ? '<span style="color:var(--green-mid);">&#10003;</span>' : '&#9675;';
+    }
+
+    function getFileIcon(name) {
+      if (name.match(/\.pdf$/i)) return '&#128196;';
+      if (name.match(/\.(jpg|jpeg|png|tiff|tif)$/i)) return '&#128247;';
+      if (name.match(/\.(doc|docx)$/i)) return '&#128221;';
+      return '&#128196;';
+    }
+
+    async function removeFile(index) {
+      const file = uploadedFiles[index];
+      if (file.id && file.path) {
+        try {
+          await deleteDocument(file.id, file.path);
+        } catch (err) {
+          showAlert(document.getElementById('alertArea'), 'error', 'Failed to remove file: ' + err.message);
+          return;
+        }
+      }
+      uploadedFiles.splice(index, 1);
+      renderFileList();
+    }
+
+    // ===================== NEXT STEP =====================
+    document.getElementById('nextBtn').addEventListener('click', async () => {
+      if (uploadedFiles.filter(f => f.uploaded).length === 0) {
+        showAlert(document.getElementById('alertArea'), 'error', 'Please upload at least one document before continuing.');
+        return;
+      }
+
+      // Update audit status
+      try {
+        await updateAuditStatus(auditId, 'questionnaire_pending');
+        window.location.href = '/questionnaire.html?audit=' + auditId;
+      } catch (err) {
+        showAlert(document.getElementById('alertArea'), 'error', 'Error: ' + err.message);
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>

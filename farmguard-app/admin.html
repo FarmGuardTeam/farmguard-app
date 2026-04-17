@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin | FarmGuard</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .admin-finding { padding: 16px; background: var(--cream); border-radius: 8px; margin-bottom: 12px; }
+    .admin-finding textarea { margin-top: 8px; }
+    .finding-controls { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .severity-select { padding: 8px 12px; border-radius: 6px; border: 1.5px solid var(--border); font-family: inherit; font-size: 14px; }
+    .doc-thumb { width: 120px; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; }
+    .admin-tab { padding: 10px 20px; border: none; background: none; font-size: 15px; font-weight: 500; cursor: pointer; color: var(--text-light); border-bottom: 2px solid transparent; font-family: inherit; }
+    .admin-tab.active { color: var(--green-dark); border-bottom-color: var(--green-mid); }
+    .tab-bar { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+  </style>
+</head>
+<body>
+  <!-- TOPBAR -->
+  <nav class="topbar">
+    <div class="topbar-inner">
+      <a href="/admin.html" class="topbar-logo">
+        <img src="/assets/farmguard-logo.svg" alt="FarmGuard">
+      </a>
+      <div class="topbar-right">
+        <span class="badge badge-review">Admin Panel</span>
+        <button class="btn btn-outline btn-sm" onclick="signOut()">Sign Out</button>
+      </div>
+    </div>
+  </nav>
+
+  <div style="max-width:1000px; margin:0 auto; padding:32px 20px;">
+    <h1 style="font-size:28px; color:var(--green-dark); margin-bottom:8px;">Admin Dashboard</h1>
+    <p style="font-size:16px; color:var(--text-mid); margin-bottom:24px;">Review AI findings, edit reports, and approve audits for delivery.</p>
+
+    <div id="alertArea"></div>
+
+    <!-- TABS -->
+    <div class="tab-bar">
+      <button class="admin-tab active" onclick="switchTab('queue')">Audit Queue</button>
+      <button class="admin-tab" onclick="switchTab('review')">Review Audit</button>
+      <button class="admin-tab" onclick="switchTab('stats')">Stats</button>
+    </div>
+
+    <!-- QUEUE TAB -->
+    <div id="queueTab">
+      <div class="card">
+        <div class="card-header">
+          <h2>Audits Awaiting Review</h2>
+          <button class="btn btn-outline btn-sm" onclick="loadQueue()">Refresh</button>
+        </div>
+        <div id="auditQueue">
+          <p style="text-align:center; padding:32px; color:var(--text-light);">Loading...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- REVIEW TAB -->
+    <div id="reviewTab" style="display:none;">
+      <div id="reviewContent">
+        <p style="text-align:center; padding:48px; color:var(--text-light);">Select an audit from the queue to review.</p>
+      </div>
+    </div>
+
+    <!-- STATS TAB -->
+    <div id="statsTab" style="display:none;">
+      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px;">
+        <div class="card" style="padding:20px; text-align:center;">
+          <div style="font-size:13px; color:var(--text-light); text-transform:uppercase;">Total Audits</div>
+          <div id="totalAudits" style="font-size:32px; font-weight:800; color:var(--green-dark);">-</div>
+        </div>
+        <div class="card" style="padding:20px; text-align:center;">
+          <div style="font-size:13px; color:var(--text-light); text-transform:uppercase;">Pending Review</div>
+          <div id="pendingReview" style="font-size:32px; font-weight:800; color:#8B6914;">-</div>
+        </div>
+        <div class="card" style="padding:20px; text-align:center;">
+          <div style="font-size:13px; color:var(--text-light); text-transform:uppercase;">Completed</div>
+          <div id="completedAudits" style="font-size:32px; font-weight:800; color:var(--green-mid);">-</div>
+        </div>
+        <div class="card" style="padding:20px; text-align:center;">
+          <div style="font-size:13px; color:var(--text-light); text-transform:uppercase;">Revenue</div>
+          <div id="totalRevenue" style="font-size:32px; font-weight:800; color:var(--green-dark);">-</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/supabase-config.js"></script>
+  <script>
+    // ADMIN EMAIL - only this email can access the admin panel
+    const ADMIN_EMAIL = 'brandonmgilles@gmail.com';
+
+    let currentUser = null;
+    let currentAudit = null;
+
+    async function init() {
+      currentUser = await requireAuth();
+      if (!currentUser) return;
+
+      // Admin check
+      if (currentUser.email !== ADMIN_EMAIL) {
+        document.body.innerHTML = '<div style="text-align:center;padding:80px 20px;"><h1 style="color:var(--red-soft);">Access Denied</h1><p>This page is restricted to admin users.</p><a href="/dashboard.html">Go to Dashboard</a></div>';
+        return;
+      }
+
+      await loadQueue();
+      await loadStats();
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-bar .admin-tab').forEach((t, i) => {
+        if ((tab === 'queue' && i === 0) || (tab === 'review' && i === 1) || (tab === 'stats' && i === 2)) t.classList.add('active');
+      });
+      document.getElementById('queueTab').style.display = tab === 'queue' ? 'block' : 'none';
+      document.getElementById('reviewTab').style.display = tab === 'review' ? 'block' : 'none';
+      document.getElementById('statsTab').style.display = tab === 'stats' ? 'block' : 'none';
+    }
+
+    async function loadQueue() {
+      const { data: audits, error } = await supabase
+        .from('audits')
+        .select('*')
+        .in('status', ['submitted', 'ai_analysis', 'admin_review', 'under_review'])
+        .order('created_at', { ascending: true });
+
+      if (error) { console.error(error); return; }
+
+      const container = document.getElementById('auditQueue');
+      if (!audits || audits.length === 0) {
+        container.innerHTML = '<p style="text-align:center; padding:32px; color:var(--text-light);">No audits in the queue. All caught up!</p>';
+        return;
+      }
+
+      container.innerHTML = audits.map(a => `
+        <div class="audit-queue-item">
+          <div class="queue-info">
+            <h4>${a.farm_name || 'Unknown Farm'} <span style="font-weight:400; color:var(--text-light); font-size:13px;">${a.audit_id}</span></h4>
+            <p>${a.crops || ''} &middot; ${a.acres ? a.acres + ' acres' : ''} &middot; ${a.state || ''} &middot; Submitted ${formatDate(a.created_at)}</p>
+          </div>
+          <div class="queue-actions">
+            <span class="badge ${statusBadgeClass(a.status)}">${statusLabel(a.status)}</span>
+            <button class="btn btn-primary btn-sm" onclick="openReview('${a.id}')">Review</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function loadStats() {
+      const { data: all } = await supabase.from('audits').select('status, paid');
+      if (!all) return;
+      document.getElementById('totalAudits').textContent = all.length;
+      document.getElementById('pendingReview').textContent = all.filter(a => ['submitted', 'ai_analysis', 'admin_review', 'under_review'].includes(a.status)).length;
+      document.getElementById('completedAudits').textContent = all.filter(a => a.status === 'complete').length;
+      document.getElementById('totalRevenue').textContent = '$' + (all.filter(a => a.paid).length * 29.99).toFixed(2);
+    }
+
+    async function openReview(id) {
+      switchTab('review');
+      const audit = await getAudit(id);
+      currentAudit = audit;
+
+      const docs = await getAuditDocuments(id);
+      const questionnaire = await getQuestionnaireResponses(id);
+      const findings = await getAuditFindings(id);
+
+      const container = document.getElementById('reviewContent');
+      container.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+          <div>
+            <h2 style="font-size:22px; color:var(--green-dark);">${audit.farm_name || 'Unknown'} — ${audit.audit_id}</h2>
+            <p style="font-size:14px; color:var(--text-light);">${audit.crops || ''} &middot; ${audit.acres || ''} acres &middot; ${audit.county || ''}, ${audit.state || ''}</p>
+          </div>
+          <span class="badge ${statusBadgeClass(audit.status)}">${statusLabel(audit.status)}</span>
+        </div>
+
+        <!-- Documents -->
+        <div class="card" style="margin-bottom:20px;">
+          <h3 style="font-size:17px; color:var(--green-dark); margin-bottom:12px;">Uploaded Documents (${docs.length})</h3>
+          <div style="display:flex; flex-wrap:wrap; gap:12px;">
+            ${docs.map(d => `
+              <div style="padding:12px; background:var(--cream); border-radius:8px; display:flex; align-items:center; gap:10px;">
+                <span style="font-size:20px;">${d.file_name?.match(/\.(jpg|jpeg|png)$/i) ? '&#128247;' : '&#128196;'}</span>
+                <div>
+                  <div style="font-size:14px; font-weight:500;">${d.file_name}</div>
+                  <div style="font-size:12px; color:var(--text-light);">${formatFileSize(d.file_size)}</div>
+                </div>
+                <a href="#" onclick="viewDoc('${d.file_path}'); return false;" style="font-size:13px; font-weight:600;">View</a>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Questionnaire Responses -->
+        <div class="card" style="margin-bottom:20px;">
+          <h3 style="font-size:17px; color:var(--green-dark); margin-bottom:12px;">Questionnaire Responses</h3>
+          ${questionnaire?.responses ? renderResponses(questionnaire.responses) : '<p style="color:var(--text-light);">No questionnaire responses.</p>'}
+        </div>
+
+        <!-- AI Findings -->
+        <div class="card" style="margin-bottom:20px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 style="font-size:17px; color:var(--green-dark);">Findings (${findings.length})</h3>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-primary btn-sm" onclick="runAIAnalysis('${id}')">&#9889; Run AI Analysis</button>
+              <button class="btn btn-outline btn-sm" onclick="addFinding('${id}')">+ Add Finding</button>
+            </div>
+          </div>
+          <div id="findingsEditor">
+            ${findings.length === 0 ? '<p style="color:var(--text-light);">No findings yet. Run AI Analysis or add findings manually.</p>' : ''}
+            ${findings.map((f, i) => renderFindingEditor(f, i)).join('')}
+          </div>
+        </div>
+
+        <!-- Executive Summary -->
+        <div class="card" style="margin-bottom:20px;">
+          <h3 style="font-size:17px; color:var(--green-dark); margin-bottom:12px;">Executive Summary</h3>
+          <div class="form-group" style="margin-bottom:0;">
+            <textarea id="execSummary" rows="4" placeholder="Write a brief executive summary of the audit findings...">${audit.executive_summary || ''}</textarea>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div style="display:flex; gap:12px; justify-content:flex-end;">
+          <button class="btn btn-outline" onclick="saveProgress('${id}')">Save Progress</button>
+          <button class="btn btn-gold" onclick="approveAudit('${id}')">Approve & Send to Customer</button>
+        </div>
+      `;
+    }
+
+    function renderResponses(responses) {
+      const labels = {
+        insurance_type: 'Insurance Type',
+        coverage_level: 'Coverage Level',
+        unit_structure: 'Unit Structure',
+        irrigation: 'Irrigation',
+        following_crop: 'Double Cropping',
+        supplemental: 'Supplemental Coverage',
+        prevented_planting: 'Prevented Planting Claims',
+        concerns: 'Customer Concerns',
+        aph_notes: 'APH Notes',
+        additional_info: 'Additional Info'
+      };
+      return Object.entries(responses)
+        .filter(([k, v]) => v && (Array.isArray(v) ? v.length > 0 : v.trim()))
+        .map(([k, v]) => `
+          <div style="display:flex; gap:12px; padding:8px 0; border-bottom:1px solid var(--cream);">
+            <strong style="font-size:14px; color:var(--text-dark); min-width:160px;">${labels[k] || k}:</strong>
+            <span style="font-size:14px; color:var(--text-mid);">${Array.isArray(v) ? v.join(', ') : v}</span>
+          </div>
+        `).join('');
+    }
+
+    function renderFindingEditor(finding, index) {
+      return `
+        <div class="admin-finding" id="finding-${finding.id}">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong style="font-size:15px;">Finding #${index + 1}</strong>
+            <select class="severity-select" onchange="updateFindingSeverity('${finding.id}', this.value)">
+              <option value="critical" ${finding.severity === 'critical' ? 'selected' : ''}>Critical</option>
+              <option value="warning" ${finding.severity === 'warning' ? 'selected' : ''}>Warning</option>
+              <option value="ok" ${finding.severity === 'ok' ? 'selected' : ''}>OK / Informational</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:8px 0 0;">
+            <input type="text" value="${finding.title || ''}" placeholder="Finding title" onchange="updateFindingField('${finding.id}', 'title', this.value)">
+          </div>
+          <div class="form-group" style="margin:8px 0 0;">
+            <textarea rows="2" placeholder="Description of the issue..." onchange="updateFindingField('${finding.id}', 'description', this.value)">${finding.description || ''}</textarea>
+          </div>
+          <div class="form-group" style="margin:8px 0 0;">
+            <textarea rows="2" placeholder="Why it matters..." onchange="updateFindingField('${finding.id}', 'why_it_matters', this.value)">${finding.why_it_matters || ''}</textarea>
+          </div>
+          <div class="form-group" style="margin:8px 0 0;">
+            <input type="text" value="${finding.agent_language || ''}" placeholder="Tell your agent: ..." onchange="updateFindingField('${finding.id}', 'agent_language', this.value)">
+          </div>
+          <div class="form-group" style="margin:8px 0 0;">
+            <input type="number" value="${finding.estimated_impact || ''}" placeholder="Estimated $ impact" onchange="updateFindingField('${finding.id}', 'estimated_impact', parseInt(this.value) || 0)">
+          </div>
+          <div class="finding-controls">
+            <button class="btn btn-danger btn-sm" onclick="deleteFinding('${finding.id}')">Delete</button>
+          </div>
+        </div>
+      `;
+    }
+
+    async function viewDoc(filePath) {
+      const url = await getDocumentUrl(filePath);
+      window.open(url, '_blank');
+    }
+
+    async function runAIAnalysis(auditId) {
+      showAlert(document.getElementById('alertArea'), 'info', 'AI analysis started. This may take a minute...');
+      try {
+        await updateAuditStatus(auditId, 'ai_analysis');
+        // Call the AI analysis API endpoint
+        const response = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ audit_id: auditId })
+        });
+        if (!response.ok) throw new Error('AI analysis failed');
+        const result = await response.json();
+        showAlert(document.getElementById('alertArea'), 'success', `AI analysis complete. ${result.findings_count || 0} findings generated.`);
+        await openReview(auditId);
+      } catch (err) {
+        showAlert(document.getElementById('alertArea'), 'error', 'AI analysis error: ' + err.message);
+      }
+    }
+
+    async function addFinding(auditId) {
+      const { data, error } = await supabase
+        .from('findings')
+        .insert({
+          audit_id: auditId,
+          title: '',
+          description: '',
+          severity: 'warning',
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+      if (error) { alert('Error: ' + error.message); return; }
+      await openReview(auditId);
+    }
+
+    async function updateFindingField(findingId, field, value) {
+      await supabase.from('findings').update({ [field]: value }).eq('id', findingId);
+    }
+
+    async function updateFindingSeverity(findingId, value) {
+      await supabase.from('findings').update({ severity: value }).eq('id', findingId);
+    }
+
+    async function deleteFinding(findingId) {
+      if (!confirm('Delete this finding?')) return;
+      await supabase.from('findings').delete().eq('id', findingId);
+      await openReview(currentAudit.id);
+    }
+
+    async function saveProgress(auditId) {
+      const summary = document.getElementById('execSummary').value.trim();
+      await supabase.from('audits').update({ executive_summary: summary, status: 'admin_review' }).eq('id', auditId);
+      showAlert(document.getElementById('alertArea'), 'success', 'Progress saved.');
+    }
+
+    async function approveAudit(auditId) {
+      if (!confirm('Approve this audit and make the report available to the customer? They will be prompted to pay $29.99 to view it.')) return;
+
+      const summary = document.getElementById('execSummary').value.trim();
+      await supabase.from('audits').update({
+        executive_summary: summary,
+        status: 'payment_pending',
+        report_ready_at: new Date().toISOString()
+      }).eq('id', auditId);
+
+      showAlert(document.getElementById('alertArea'), 'success', 'Audit approved! Customer will be notified.');
+      await loadQueue();
+      switchTab('queue');
+    }
+
+    init();
+  </script>
+</body>
+</html>

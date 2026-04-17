@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audit Report | FarmGuard</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <!-- TOPBAR -->
+  <nav class="topbar">
+    <div class="topbar-inner">
+      <a href="/dashboard.html" class="topbar-logo">
+        <img src="/assets/farmguard-logo.svg" alt="FarmGuard">
+      </a>
+      <div class="topbar-right">
+        <a href="/dashboard.html" class="btn btn-outline btn-sm">Back to Dashboard</a>
+      </div>
+    </div>
+  </nav>
+
+  <div style="max-width:800px; margin:0 auto; padding:32px 20px;">
+    <div id="alertArea"></div>
+
+    <!-- LOADING STATE -->
+    <div id="loadingState" style="text-align:center; padding:60px 20px;">
+      <div class="spinner spinner-dark" style="width:36px; height:36px; border-width:3px;"></div>
+      <p style="margin-top:16px; color:var(--text-mid);">Loading your audit report...</p>
+    </div>
+
+    <!-- IN PROGRESS STATE -->
+    <div id="inProgressState" style="display:none;">
+      <div class="card" style="text-align:center; padding:48px 24px;">
+        <div style="font-size:56px; margin-bottom:16px;">&#128270;</div>
+        <h2 style="font-size:24px; color:var(--green-dark); margin-bottom:8px;">Your Audit is In Progress</h2>
+        <p id="inProgressStatus" style="font-size:16px; color:var(--text-mid); margin-bottom:24px;"></p>
+
+        <!-- Progress tracker -->
+        <div class="wizard-steps" style="max-width:500px;">
+          <div class="wizard-step">
+            <div class="wizard-dot" id="rp1">1</div>
+            <div class="wizard-label">Submitted</div>
+          </div>
+          <div class="wizard-line" id="rpLine1"></div>
+          <div class="wizard-step">
+            <div class="wizard-dot" id="rp2">2</div>
+            <div class="wizard-label">AI<br>Analysis</div>
+          </div>
+          <div class="wizard-line" id="rpLine2"></div>
+          <div class="wizard-step">
+            <div class="wizard-dot" id="rp3">3</div>
+            <div class="wizard-label">Expert<br>Review</div>
+          </div>
+          <div class="wizard-line" id="rpLine3"></div>
+          <div class="wizard-step">
+            <div class="wizard-dot" id="rp4">4</div>
+            <div class="wizard-label">Report<br>Ready</div>
+          </div>
+        </div>
+
+        <p style="font-size:14px; color:var(--text-light); margin-top:20px;">We'll email you when your report is ready. Check back anytime.</p>
+      </div>
+    </div>
+
+    <!-- PAYMENT GATE -->
+    <div id="paymentState" style="display:none;">
+      <div style="text-align:center; margin-bottom:24px;">
+        <h1 style="font-size:28px; color:var(--green-dark); margin-bottom:4px;">Your Report is Ready!</h1>
+        <p id="paymentAuditInfo" style="font-size:15px; color:var(--text-light);"></p>
+      </div>
+
+      <!-- Preview / Teaser -->
+      <div class="card" style="margin-bottom:24px;">
+        <h2 style="font-size:20px; color:var(--green-dark); margin-bottom:16px;">Report Preview</h2>
+        <div id="reportPreview">
+          <!-- Populated by JS - shows finding count and summary but blurred details -->
+        </div>
+      </div>
+
+      <!-- Payment CTA -->
+      <div class="payment-gate">
+        <h2>Unlock Your Full Report</h2>
+        <p>See every finding, annotated documents with highlighted errors, and your agent-ready action plan.</p>
+        <div class="payment-price">$29.99</div>
+        <div class="payment-note">One-time payment &mdash; no subscription</div>
+        <ul class="payment-features">
+          <li>Detailed findings with dollar impact estimates</li>
+          <li>Your policy documents with errors highlighted</li>
+          <li>Side-by-side coverage scenario comparisons</li>
+          <li>Agent-ready action plan with exact language</li>
+          <li>APH record review (if provided)</li>
+        </ul>
+        <a id="payBtn" href="#" class="btn btn-gold btn-lg" style="font-size:18px; padding:18px 48px;">
+          Pay $29.99 & Unlock Report
+        </a>
+        <p style="font-size:13px; opacity:0.6; margin-top:12px;">Secure payment via Stripe. Your report is available instantly after payment.</p>
+      </div>
+    </div>
+
+    <!-- FULL REPORT (after payment) -->
+    <div id="reportState" style="display:none;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+        <div>
+          <h1 style="font-size:28px; color:var(--green-dark); margin-bottom:4px;">Your Audit Report</h1>
+          <p id="reportAuditInfo" style="font-size:15px; color:var(--text-light);"></p>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="window.print()">&#128424; Print Report</button>
+      </div>
+
+      <!-- Executive Summary -->
+      <div class="report-section">
+        <h2>Executive Summary</h2>
+        <div id="executiveSummary"></div>
+      </div>
+
+      <!-- Annotated Documents -->
+      <div class="report-section">
+        <h2>Annotated Policy Documents</h2>
+        <p style="font-size:15px; color:var(--text-mid); margin-bottom:16px;">
+          Red boxes highlight errors and coverage gaps found in your documents. Hover or tap on any box to see the finding.
+        </p>
+        <div id="annotatedDocs">
+          <!-- Each document image with highlight overlays -->
+        </div>
+      </div>
+
+      <!-- Detailed Findings -->
+      <div class="report-section">
+        <h2>Detailed Findings</h2>
+        <div id="findingsList"></div>
+      </div>
+
+      <!-- Premium Analysis -->
+      <div class="report-section">
+        <h2>Premium Savings Analysis</h2>
+        <div id="premiumAnalysis"></div>
+      </div>
+
+      <!-- Action Plan -->
+      <div class="report-section" style="border-left:4px solid var(--green-mid);">
+        <h2>Agent-Ready Action Plan</h2>
+        <p style="font-size:15px; color:var(--text-mid); margin-bottom:16px;">
+          Take this section directly to your agent. Each item includes the exact language to use.
+        </p>
+        <div id="actionPlan"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="/js/supabase-config.js"></script>
+  <script>
+    let currentUser = null;
+    let auditId = null;
+    let auditData = null;
+
+    const params = new URLSearchParams(window.location.search);
+    auditId = params.get('audit');
+
+    // Check if returning from Stripe payment
+    const paymentSuccess = params.get('payment') === 'success';
+
+    async function init() {
+      currentUser = await requireAuth();
+      if (!currentUser || !auditId) {
+        window.location.href = '/dashboard.html';
+        return;
+      }
+
+      try {
+        auditData = await getAudit(auditId);
+      } catch (err) {
+        window.location.href = '/dashboard.html';
+        return;
+      }
+
+      // Handle Stripe redirect
+      if (paymentSuccess && auditData.status === 'payment_pending') {
+        await updateAuditStatus(auditId, 'complete');
+        auditData.status = 'complete';
+        // Update payment record
+        await supabase.from('audits').update({ paid: true, paid_at: new Date().toISOString() }).eq('id', auditId);
+      }
+
+      document.getElementById('loadingState').style.display = 'none';
+
+      const status = auditData.status;
+
+      if (status === 'complete' || (status === 'payment_pending' && auditData.paid)) {
+        // Show full report
+        await showFullReport();
+      } else if (status === 'payment_pending' || status === 'report_ready') {
+        // Show payment gate
+        showPaymentGate();
+      } else {
+        // In progress
+        showInProgress(status);
+      }
+    }
+
+    function showInProgress(status) {
+      document.getElementById('inProgressState').style.display = 'block';
+
+      const statusMessages = {
+        'submitted': 'Your documents have been received and are queued for analysis.',
+        'under_review': 'We\'re reviewing your documents.',
+        'ai_analysis': 'Our AI is scanning your policy for errors and coverage gaps.',
+        'admin_review': 'A crop insurance specialist is reviewing the findings.'
+      };
+      document.getElementById('inProgressStatus').textContent = statusMessages[status] || 'Your audit is being processed.';
+
+      // Update progress dots
+      const steps = ['submitted', 'ai_analysis', 'admin_review', 'report_ready'];
+      const currentIdx = steps.indexOf(status);
+
+      for (let i = 1; i <= 4; i++) {
+        const dot = document.getElementById('rp' + i);
+        const line = document.getElementById('rpLine' + i);
+        if (i - 1 < currentIdx) {
+          dot.className = 'wizard-dot done'; dot.innerHTML = '&#10003;';
+          if (line) line.className = 'wizard-line done';
+        } else if (i - 1 === currentIdx) {
+          dot.className = 'wizard-dot active';
+        } else {
+          dot.className = 'wizard-dot pending';
+        }
+      }
+    }
+
+    function showPaymentGate() {
+      document.getElementById('paymentState').style.display = 'block';
+      document.getElementById('paymentAuditInfo').textContent =
+        auditData.audit_id + ' \u2022 ' + (auditData.farm_name || '') + ' \u2022 ' + (auditData.crops || '');
+
+      // Set Stripe link with audit context
+      const returnUrl = window.location.origin + '/report.html?audit=' + auditId + '&payment=success';
+      document.getElementById('payBtn').href = STRIPE_PAYMENT_LINK + '?client_reference_id=' + auditId;
+
+      // Show preview teaser
+      loadReportPreview();
+    }
+
+    async function loadReportPreview() {
+      try {
+        const findings = await getAuditFindings(auditId);
+        const critical = findings.filter(f => f.severity === 'critical').length;
+        const warnings = findings.filter(f => f.severity === 'warning').length;
+        const ok = findings.filter(f => f.severity === 'ok').length;
+        const totalImpact = findings.reduce((sum, f) => sum + (f.estimated_impact || 0), 0);
+
+        document.getElementById('reportPreview').innerHTML = `
+          <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:16px;">
+            <div style="text-align:center; padding:16px; background:#FFF8F6; border-radius:8px;">
+              <div style="font-size:28px; font-weight:800; color:var(--red-soft);">${critical}</div>
+              <div style="font-size:13px; color:var(--text-mid);">Critical Issues</div>
+            </div>
+            <div style="text-align:center; padding:16px; background:#FFFBF0; border-radius:8px;">
+              <div style="font-size:28px; font-weight:800; color:#8B6914;">${warnings}</div>
+              <div style="font-size:13px; color:var(--text-mid);">Warnings</div>
+            </div>
+            <div style="text-align:center; padding:16px; background:#F6FBF3; border-radius:8px;">
+              <div style="font-size:28px; font-weight:800; color:var(--green-mid);">${ok}</div>
+              <div style="font-size:13px; color:var(--text-mid);">Items OK</div>
+            </div>
+          </div>
+          ${totalImpact > 0 ? `<div style="text-align:center; padding:16px; background:var(--cream); border-radius:8px;">
+            <div style="font-size:14px; color:var(--text-light);">Estimated Total Impact</div>
+            <div style="font-size:32px; font-weight:800; color:var(--green-dark);">$${totalImpact.toLocaleString()}</div>
+          </div>` : ''}
+          <p style="font-size:14px; color:var(--text-light); text-align:center; margin-top:12px; font-style:italic;">
+            Full details, annotated documents, and action plan available after payment.
+          </p>
+        `;
+      } catch (err) {
+        document.getElementById('reportPreview').innerHTML = '<p style="color:var(--text-light);">Preview loading...</p>';
+      }
+    }
+
+    async function showFullReport() {
+      document.getElementById('reportState').style.display = 'block';
+      document.getElementById('reportAuditInfo').textContent =
+        auditData.audit_id + ' \u2022 ' + (auditData.farm_name || '') + ' \u2022 ' + (auditData.crops || '');
+
+      const findings = await getAuditFindings(auditId);
+      const documents = await getAuditDocuments(auditId);
+
+      // Executive Summary
+      const critical = findings.filter(f => f.severity === 'critical');
+      const warnings = findings.filter(f => f.severity === 'warning');
+      const totalImpact = findings.reduce((sum, f) => sum + (f.estimated_impact || 0), 0);
+
+      document.getElementById('executiveSummary').innerHTML = `
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:16px;">
+          <div style="padding:16px; background:#FFF8F6; border-radius:8px; text-align:center;">
+            <div style="font-size:28px; font-weight:800; color:var(--red-soft);">${critical.length}</div>
+            <div style="font-size:13px; color:var(--text-mid);">Critical Issues Found</div>
+          </div>
+          <div style="padding:16px; background:#FFFBF0; border-radius:8px; text-align:center;">
+            <div style="font-size:28px; font-weight:800; color:#8B6914;">${warnings.length}</div>
+            <div style="font-size:13px; color:var(--text-mid);">Warnings</div>
+          </div>
+          <div style="padding:16px; background:#F6FBF3; border-radius:8px; text-align:center;">
+            <div style="font-size:28px; font-weight:800; color:var(--green-dark);">$${totalImpact.toLocaleString()}</div>
+            <div style="font-size:13px; color:var(--text-mid);">Estimated Total Impact</div>
+          </div>
+        </div>
+        ${auditData.executive_summary ? `<p style="font-size:15px; color:var(--text-mid); line-height:1.7;">${auditData.executive_summary}</p>` : ''}
+      `;
+
+      // Annotated Documents
+      const docsContainer = document.getElementById('annotatedDocs');
+      for (const doc of documents) {
+        const docFindings = findings.filter(f => f.document_id === doc.id);
+        if (doc.file_type?.startsWith('image/') || doc.file_name?.match(/\.(jpg|jpeg|png)$/i)) {
+          const url = await getDocumentUrl(doc.file_path);
+          docsContainer.innerHTML += `
+            <div class="doc-viewer" style="margin-bottom:20px;">
+              <p style="font-size:14px; font-weight:600; color:var(--text-dark); padding:12px 16px; background:var(--cream); border-bottom:1px solid var(--border);">
+                ${doc.file_name}
+              </p>
+              <div style="position:relative;">
+                <img src="${url}" alt="${doc.file_name}" style="width:100%; display:block;">
+                ${docFindings.map(f => f.highlight_coords ? `
+                  <div class="highlight-box ${f.severity === 'warning' ? 'warning' : ''}"
+                    style="top:${f.highlight_coords.top}%; left:${f.highlight_coords.left}%; width:${f.highlight_coords.width}%; height:${f.highlight_coords.height}%;">
+                    <div class="highlight-tooltip">${f.title}</div>
+                  </div>
+                ` : '').join('')}
+              </div>
+            </div>
+          `;
+        } else {
+          // Non-image documents (PDF, etc)
+          docsContainer.innerHTML += `
+            <div style="padding:16px; background:var(--cream); border-radius:8px; margin-bottom:12px; display:flex; align-items:center; gap:12px;">
+              <span style="font-size:24px;">&#128196;</span>
+              <div>
+                <div style="font-weight:600; font-size:15px;">${doc.file_name}</div>
+                <div style="font-size:13px; color:var(--text-light);">${formatFileSize(doc.file_size)}</div>
+              </div>
+              ${docFindings.length > 0 ? `<span class="badge badge-payment" style="margin-left:auto;">${docFindings.length} issue${docFindings.length > 1 ? 's' : ''} found</span>` : '<span class="badge badge-complete" style="margin-left:auto;">No issues</span>'}
+            </div>
+          `;
+        }
+      }
+
+      // Detailed Findings
+      const findingsContainer = document.getElementById('findingsList');
+      if (findings.length === 0) {
+        findingsContainer.innerHTML = '<p style="color:var(--text-mid);">No findings were identified in this audit.</p>';
+      } else {
+        findingsContainer.innerHTML = findings.map((f, i) => `
+          <div class="finding-card ${f.severity === 'warning' ? 'finding-warning' : f.severity === 'ok' ? 'finding-ok' : ''}">
+            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:4px;">
+              <h4>Finding #${i + 1}: ${f.title}</h4>
+              ${f.estimated_impact ? `<span style="font-size:14px; font-weight:700; color:var(--red-soft);">$${f.estimated_impact.toLocaleString()} impact</span>` : ''}
+            </div>
+            <p>${f.description}</p>
+            ${f.why_it_matters ? `<p style="font-size:14px; color:var(--text-mid);"><strong>Why it matters:</strong> ${f.why_it_matters}</p>` : ''}
+            ${f.agent_language ? `<div class="finding-action"><strong>Tell your agent:</strong> "${f.agent_language}"</div>` : ''}
+          </div>
+        `).join('');
+      }
+
+      // Premium Analysis
+      const premiumContainer = document.getElementById('premiumAnalysis');
+      if (auditData.premium_analysis) {
+        premiumContainer.innerHTML = `<p style="font-size:15px; color:var(--text-mid); line-height:1.7;">${auditData.premium_analysis}</p>`;
+      } else {
+        premiumContainer.innerHTML = '<p style="color:var(--text-light);">Premium analysis not available for this audit.</p>';
+      }
+
+      // Action Plan
+      const actionContainer = document.getElementById('actionPlan');
+      const priorityFindings = findings.filter(f => f.severity === 'critical');
+      const secondaryFindings = findings.filter(f => f.severity === 'warning');
+
+      let actionHTML = '';
+      if (priorityFindings.length > 0) {
+        actionHTML += '<h3 style="font-size:17px; color:var(--red-soft); margin-bottom:12px;">Priority Actions (Before Next Renewal)</h3>';
+        actionHTML += priorityFindings.map((f, i) => `
+          <div style="padding:12px 16px; background:#FFF8F6; border-radius:8px; margin-bottom:8px;">
+            <strong>${i + 1}. ${f.title}</strong>
+            ${f.agent_language ? `<p style="font-size:14px; color:var(--text-mid); margin-top:4px;">"${f.agent_language}"</p>` : ''}
+          </div>
+        `).join('');
+      }
+      if (secondaryFindings.length > 0) {
+        actionHTML += '<h3 style="font-size:17px; color:#8B6914; margin:20px 0 12px;">Secondary Actions (Consider for Future)</h3>';
+        actionHTML += secondaryFindings.map((f, i) => `
+          <div style="padding:12px 16px; background:#FFFBF0; border-radius:8px; margin-bottom:8px;">
+            <strong>${i + 1}. ${f.title}</strong>
+            ${f.agent_language ? `<p style="font-size:14px; color:var(--text-mid); margin-top:4px;">"${f.agent_language}"</p>` : ''}
+          </div>
+        `).join('');
+      }
+      if (!actionHTML) {
+        actionHTML = '<p style="color:var(--text-mid);">No action items identified.</p>';
+      }
+      actionContainer.innerHTML = actionHTML;
+    }
+
+    init();
+  </script>
+</body>
+</html>

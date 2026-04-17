@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Questionnaire | FarmGuard</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <!-- TOPBAR -->
+  <nav class="topbar">
+    <div class="topbar-inner">
+      <a href="/dashboard.html" class="topbar-logo">
+        <img src="/assets/farmguard-logo.svg" alt="FarmGuard">
+      </a>
+      <div class="topbar-right">
+        <a href="/dashboard.html" class="btn btn-outline btn-sm">Back to Dashboard</a>
+      </div>
+    </div>
+  </nav>
+
+  <div style="max-width:700px; margin:0 auto; padding:32px 20px;">
+    <!-- WIZARD PROGRESS -->
+    <div class="wizard-steps">
+      <div class="wizard-step">
+        <div class="wizard-dot done">&#10003;</div>
+        <div class="wizard-label">Upload<br>Documents</div>
+      </div>
+      <div class="wizard-line done"></div>
+      <div class="wizard-step">
+        <div class="wizard-dot active">2</div>
+        <div class="wizard-label">Answer<br>Questions</div>
+      </div>
+      <div class="wizard-line"></div>
+      <div class="wizard-step">
+        <div class="wizard-dot pending">3</div>
+        <div class="wizard-label">Review &<br>Submit</div>
+      </div>
+    </div>
+
+    <h1 style="font-size:28px; color:var(--green-dark); margin-bottom:8px;">Tell Us About Your Operation</h1>
+    <p style="font-size:16px; color:var(--text-mid); margin-bottom:28px;">
+      These questions help us identify potential issues faster. Answer what you can &mdash; skip anything you're unsure about.
+    </p>
+
+    <div id="alertArea"></div>
+
+    <form id="questionnaireForm">
+
+      <!-- SECTION 1: Operation Basics -->
+      <div class="question-card">
+        <h3>What type of crop insurance do you currently have?</h3>
+        <p class="q-hint">Select all that apply. If unsure, that's OK &mdash; we'll identify it from your documents.</p>
+        <div class="checkbox-group">
+          <label class="checkbox-option" onclick="this.classList.toggle('selected')">
+            <input type="checkbox" name="insurance_type" value="RP"> Revenue Protection (RP)
+          </label>
+          <label class="checkbox-option" onclick="this.classList.toggle('selected')">
+            <input type="checkbox" name="insurance_type" value="RP-HPE"> Revenue Protection with Harvest Price Exclusion (RP-HPE)
+          </label>
+          <label class="checkbox-option" onclick="this.classList.toggle('selected')">
+            <input type="checkbox" name="insurance_type" value="YP"> Yield Protection (YP)
+          </label>
+          <label class="checkbox-option" onclick="this.classList.toggle('selected')">
+            <input type="checkbox" name="insurance_type" value="ARP"> Area Risk Protection (ARP)
+          </label>
+          <label class="checkbox-option" onclick="this.classList.toggle('selected')">
+            <input type="checkbox" name="insurance_type" value="unsure"> I'm not sure
+          </label>
+        </div>
+      </div>
+
+      <!-- SECTION 2: Coverage Level -->
+      <div class="question-card">
+        <h3>What coverage level do you carry?</h3>
+        <p class="q-hint">This is a percentage, typically between 50% and 85%.</p>
+        <div class="radio-group">
+          <label class="radio-option" onclick="selectRadio(this)">
+            <input type="radio" name="coverage_level" value="50-60"> 50% &ndash; 60%
+          </label>
+          <label class="radio-option" onclick="selectRadio(this)">
+            <input type="radio" name="coverage_level" value="65-70"> 65% &ndash; 70%
+          </label>
+          <label class="radio-option" onclick="selectRadio(this)">
+            <input type="radio" name="coverage_level" value="75-80"> 75% &ndash; 80%
+          </label>
+          <label class="radio-option" onclick="selectRadio(this)">
+            <input type="radio" name="coverage_level" value="85"> 85%
+          </label>
+          <label class="radio-option" onclick="selectRadio(this)">
+            <input type="radio" name="coverage_level" value="unsure"> I'm not sure
+          </label>
+        </div>
+      </div>
+
+      <!-- SECTION 3: Unit Structure -->
+      <div class="question-card">
+        <h3>What unit structure does your policy use?</h3>
+        <p class="q-hint">This affects how losses are calculated. Enterprise units combine all fields; optional/basic units keep them separate.</p>
+        <div class="radio-group">
+          <label class="radio-option" onclick="selectRadio(this)">
+            <input type="radio" name="unit_structure" value="enterprise"> Enterprise Units
+          </label>
+          <label class="radio-option" onclick="selectRadio(this)">
+            <input type="radio" name="unit_structure" value="optional"> Optional Units
+          </label>
+          <label class="radio-option" onclick="selectRadio(this)">
+            <input type="radio" name="unit_structure" value="basic"> Basic Units
+          </label>
+          <label class="radio-option" onclick="selectRadio(this)">
+            <input type="radio" name="unit_structure" value="unsure"> I'm not sure
+          </label>
+        </div>
+      </div>
+
+      <!-- SECTION 4: Farming Practices -->
+      <div class="question-card">
+        <h3>Do you use irrigated or non-irrigated practices?</h3>
+        <p class="q-hint">Mismatched practice codes are one of the most common errors we find.</p>
+        <div class="radio-group">
+          <label class="radio-option" onclick="selectRadio(this)">
+            <input type="radio" name="irrigation" value="all_irrigated"> All irrigated
+          </label>
+          <label class="radio-option" onclick="selectRadio(this)">
+            <input type="radio" name="irrigation" value="all_dryland"> All non-irrigated (dryland)
+          </label>
+          <label class="radio-option" onclick="selectRadio(this)">
+            <input type="radio" name="irrigation" value="mix"> Mix of both
+          </label>
+        </div>
+      </div>
+
+      <!-- SECTION 5: Following Crop -->
+      <div class="question-card">
+        <h3>Do any of your crops follow another crop in the same season?</h3>
+        <p class="q-hint">For example: double-crop soybeans after winter wheat. This affects your practice code and premium.</p>
+        <div class="radio-group">
+          <label class="radio-option" onclick="selectRadio(this)">
+            <input type="radio" name="following_crop" value="yes"> Yes, I double-crop
+          </label>
+          <label class="radio-option" onclick="selectRadio(this)">
+            <input type="radio" name="following_crop" value="no"> No
+          </label>
+          <label class="radio-option" onclick="selectRadio(this)">
+            <input type="radio" name="following_crop" value="unsure"> Not sure
+          </label>
+        </div>
+      </div>
+
+      <!-- SECTION 6: Supplemental Coverage -->
+      <div class="question-card">
+        <h3>Do you currently carry any supplemental coverage?</h3>
+        <p class="q-hint">Select all that apply.</p>
+        <div class="checkbox-group">
+          <label class="checkbox-option" onclick="this.classList.toggle('selected')">
+            <input type="checkbox" name="supplemental" value="SCO"> Supplemental Coverage Option (SCO)
+          </label>
+          <label class="checkbox-option" onclick="this.classList.toggle('selected')">
+            <input type="checkbox" name="supplemental" value="ECO"> Enhanced Coverage Option (ECO)
+          </label>
+          <label class="checkbox-option" onclick="this.classList.toggle('selected')">
+            <input type="checkbox" name="supplemental" value="stax"> Stacked Income Protection (STAX)
+          </label>
+          <label class="checkbox-option" onclick="this.classList.toggle('selected')">
+            <input type="checkbox" name="supplemental" value="none"> None / I don't think so
+          </label>
+          <label class="checkbox-option" onclick="this.classList.toggle('selected')">
+            <input type="checkbox" name="supplemental" value="unsure"> I'm not sure
+          </label>
+        </div>
+      </div>
+
+      <!-- SECTION 7: Prevented Planting -->
+      <div class="question-card">
+        <h3>Have you ever had a prevented planting claim?</h3>
+        <p class="q-hint">This helps us check whether your prevented planting provisions are set up correctly.</p>
+        <div class="radio-group">
+          <label class="radio-option" onclick="selectRadio(this)">
+            <input type="radio" name="prevented_planting" value="yes"> Yes
+          </label>
+          <label class="radio-option" onclick="selectRadio(this)">
+            <input type="radio" name="prevented_planting" value="no"> No
+          </label>
+          <label class="radio-option" onclick="selectRadio(this)">
+            <input type="radio" name="prevented_planting" value="unsure"> Not sure
+          </label>
+        </div>
+      </div>
+
+      <!-- SECTION 8: Agent Concerns -->
+      <div class="question-card">
+        <h3>Is there anything specific you're concerned about with your current policy?</h3>
+        <p class="q-hint">This helps us focus our analysis. Mention anything &mdash; premium cost, coverage gaps, yield history, or anything your agent told you that didn't sound right.</p>
+        <div class="form-group" style="margin-bottom:0;">
+          <textarea name="concerns" id="concerns" placeholder="e.g. My premium went up 30% this year and my agent couldn't explain why. Also, I'm not sure my irrigated acres are coded correctly..." rows="4"></textarea>
+        </div>
+      </div>
+
+      <!-- SECTION 9: APH -->
+      <div class="question-card">
+        <h3>Do you know your approximate APH (Actual Production History) yields?</h3>
+        <p class="q-hint">If you uploaded your APH records, you can skip this. Otherwise, give us your best estimates.</p>
+        <div class="form-group" style="margin-bottom:0;">
+          <textarea name="aph_notes" id="aphNotes" placeholder="e.g. Corn: about 180 bu/acre, Soybeans: about 52 bu/acre" rows="3"></textarea>
+        </div>
+      </div>
+
+      <!-- SECTION 10: Additional Info -->
+      <div class="question-card">
+        <h3>Anything else we should know?</h3>
+        <p class="q-hint">Changes in acreage, new crops, changes in farming practices, recent land purchases — anything that might affect your coverage.</p>
+        <div class="form-group" style="margin-bottom:0;">
+          <textarea name="additional_info" id="additionalInfo" placeholder="Optional — add any context that might help our review." rows="3"></textarea>
+        </div>
+      </div>
+
+      <!-- ACTIONS -->
+      <div style="display:flex; gap:12px; margin-top:28px; justify-content:space-between; align-items:center;">
+        <a href="#" id="backLink" style="font-size:14px; color:var(--text-light);">&larr; Back to Upload</a>
+        <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+          Review & Submit &#8594;
+        </button>
+      </div>
+
+    </form>
+  </div>
+
+  <script src="/js/supabase-config.js"></script>
+  <script>
+    let currentUser = null;
+    let auditId = null;
+
+    const params = new URLSearchParams(window.location.search);
+    auditId = params.get('audit');
+
+    function selectRadio(el) {
+      el.closest('.radio-group').querySelectorAll('.radio-option').forEach(o => o.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
+    async function init() {
+      currentUser = await requireAuth();
+      if (!currentUser || !auditId) {
+        window.location.href = '/dashboard.html';
+        return;
+      }
+
+      document.getElementById('backLink').href = '/upload.html?audit=' + auditId;
+
+      // Load existing responses if any
+      try {
+        const existing = await getQuestionnaireResponses(auditId);
+        if (existing && existing.responses) {
+          populateForm(existing.responses);
+        }
+      } catch (err) {
+        // No existing responses, that's fine
+      }
+    }
+
+    function populateForm(responses) {
+      // Restore checkbox values
+      if (responses.insurance_type) {
+        responses.insurance_type.forEach(val => {
+          const cb = document.querySelector(`input[name="insurance_type"][value="${val}"]`);
+          if (cb) { cb.checked = true; cb.closest('.checkbox-option').classList.add('selected'); }
+        });
+      }
+      if (responses.supplemental) {
+        responses.supplemental.forEach(val => {
+          const cb = document.querySelector(`input[name="supplemental"][value="${val}"]`);
+          if (cb) { cb.checked = true; cb.closest('.checkbox-option').classList.add('selected'); }
+        });
+      }
+      // Restore radio values
+      ['coverage_level', 'unit_structure', 'irrigation', 'following_crop', 'prevented_planting'].forEach(name => {
+        if (responses[name]) {
+          const radio = document.querySelector(`input[name="${name}"][value="${responses[name]}"]`);
+          if (radio) { radio.checked = true; radio.closest('.radio-option').classList.add('selected'); }
+        }
+      });
+      // Restore textareas
+      if (responses.concerns) document.getElementById('concerns').value = responses.concerns;
+      if (responses.aph_notes) document.getElementById('aphNotes').value = responses.aph_notes;
+      if (responses.additional_info) document.getElementById('additionalInfo').value = responses.additional_info;
+    }
+
+    function collectResponses() {
+      return {
+        insurance_type: Array.from(document.querySelectorAll('input[name="insurance_type"]:checked')).map(cb => cb.value),
+        coverage_level: document.querySelector('input[name="coverage_level"]:checked')?.value || null,
+        unit_structure: document.querySelector('input[name="unit_structure"]:checked')?.value || null,
+        irrigation: document.querySelector('input[name="irrigation"]:checked')?.value || null,
+        following_crop: document.querySelector('input[name="following_crop"]:checked')?.value || null,
+        supplemental: Array.from(document.querySelectorAll('input[name="supplemental"]:checked')).map(cb => cb.value),
+        prevented_planting: document.querySelector('input[name="prevented_planting"]:checked')?.value || null,
+        concerns: document.getElementById('concerns').value.trim(),
+        aph_notes: document.getElementById('aphNotes').value.trim(),
+        additional_info: document.getElementById('additionalInfo').value.trim()
+      };
+    }
+
+    document.getElementById('questionnaireForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Submitting...';
+
+      try {
+        const responses = collectResponses();
+        await saveQuestionnaireResponses(auditId, responses);
+        await updateAuditStatus(auditId, 'submitted');
+
+        // Redirect to a confirmation/review page
+        window.location.href = '/submitted.html?audit=' + auditId;
+      } catch (err) {
+        showAlert(document.getElementById('alertArea'), 'error', 'Error saving responses: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Review & Submit \u2192';
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>

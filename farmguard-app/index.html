@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FarmGuard | Independent Crop Insurance Policy Audit</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --green-dark: #2D5016;
+      --green-mid: #4A7C23;
+      --green-light: #6B9B37;
+      --gold: #D4A843;
+      --gold-light: #F0D78C;
+      --cream: #FAFAF5;
+      --text-dark: #1A1A1A;
+      --text-mid: #4A4A4A;
+      --text-light: #6B6B6B;
+      --white: #FFFFFF;
+      --red-soft: #C0392B;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: var(--text-dark);
+      line-height: 1.6;
+      background: var(--cream);
+    }
+
+    /* ===================== NAVBAR ===================== */
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: var(--white);
+      border-bottom: 1px solid #E5E5E5;
+      box-shadow: 0 1px 8px rgba(0,0,0,0.04);
+    }
+    .navbar-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      height: 64px;
+    }
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .nav-logo svg { height: 40px; width: auto; }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      list-style: none;
+    }
+    .nav-links a {
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text-mid);
+      padding: 8px 14px;
+      border-radius: 6px;
+      transition: all 0.15s;
+    }
+    .nav-links a:hover {
+      color: var(--green-dark);
+      background: rgba(45,80,22,0.06);
+    }
+    .nav-links .nav-signin {
+      color: var(--green-mid);
+      font-weight: 600;
+    }
+    .nav-links .nav-cta {
+      background: var(--green-mid);
+      color: var(--white);
+      font-weight: 600;
+      padding: 9px 20px;
+      border-radius: 8px;
+      margin-left: 4px;
+    }
+    .nav-links .nav-cta:hover {
+      background: var(--green-dark);
+      color: var(--white);
+    }
+
+    /* Mobile nav */
+    .nav-toggle {
+      display: none;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+    }
+    .nav-toggle span {
+      display: block;
+      width: 24px;
+      height: 2px;
+      background: var(--text-dark);
+      margin: 6px 0;
+      border-radius: 2px;
+      transition: all 0.2s;
+    }
+
+    @media (max-width: 768px) {
+      .nav-toggle { display: block; }
+      .nav-links {
+        display: none;
+        position: absolute;
+        top: 64px;
+        left: 0;
+        right: 0;
+        background: var(--white);
+        flex-direction: column;
+        padding: 12px 20px 20px;
+        border-bottom: 1px solid #E5E5E5;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        gap: 4px;
+      }
+      .nav-links.open { display: flex; }
+      .nav-links a { padding: 12px 14px; width: 100%; }
+      .nav-links .nav-cta { text-align: center; margin-left: 0; margin-top: 8px; }
+    }
+
+    /* ===================== HERO ===================== */
+    .hero {
+      background: linear-gradient(135deg, var(--green-dark) 0%, var(--green-mid) 100%);
+      color: var(--white);
+      padding: 60px 20px 80px;
+      text-align: center;
+      position: relative;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: -40px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0; height: 0;
+      border-left: 40px solid transparent;
+      border-right: 40px solid transparent;
+      border-top: 40px solid var(--green-mid);
+    }
+    .hero-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 6px 18px;
+      border-radius: 50px;
+      font-size: 14px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+    .hero h1 {
+      font-size: clamp(28px, 5vw, 48px);
+      font-weight: 800;
+      line-height: 1.2;
+      max-width: 720px;
+      margin: 0 auto 20px;
+    }
+    .hero h1 span { color: var(--gold-light); }
+    .hero-sub {
+      font-size: clamp(16px, 2.5vw, 20px);
+      opacity: 0.9;
+      max-width: 600px;
+      margin: 0 auto 32px;
+      font-weight: 400;
+    }
+    .hero-cta {
+      display: inline-block;
+      background: var(--gold);
+      color: var(--green-dark);
+      padding: 16px 40px;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all 0.2s;
+      border: none;
+      cursor: pointer;
+    }
+    .hero-cta:hover {
+      background: var(--gold-light);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
+    .hero-guarantee {
+      margin-top: 16px;
+      font-size: 14px;
+      opacity: 0.8;
+    }
+    .hero-flat {
+      margin-top: 8px;
+      font-size: 15px;
+      opacity: 0.85;
+      font-weight: 500;
+    }
+
+    /* ===================== CONTAINER ===================== */
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* ===================== PROBLEM ===================== */
+    .problem {
+      padding: 80px 20px 60px;
+      text-align: center;
+    }
+    .problem h2 {
+      font-size: clamp(22px, 4vw, 32px);
+      color: var(--green-dark);
+      margin-bottom: 12px;
+    }
+    .problem-lead {
+      font-size: 18px;
+      color: var(--text-mid);
+      max-width: 600px;
+      margin: 0 auto 40px;
+    }
+    .problem-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 24px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .stat-card {
+      background: var(--white);
+      border-radius: 12px;
+      padding: 28px 20px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      border-top: 4px solid var(--red-soft);
+    }
+    .stat-number {
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--red-soft);
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+    .stat-text { font-size: 15px; color: var(--text-mid); }
+
+    /* ===================== HOW IT WORKS ===================== */
+    .process {
+      padding: 60px 20px;
+      background: var(--white);
+    }
+    .process h2 {
+      text-align: center;
+      font-size: clamp(22px, 4vw, 32px);
+      color: var(--green-dark);
+      margin-bottom: 40px;
+    }
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 30px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .step { text-align: center; }
+    .step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 52px; height: 52px;
+      background: var(--green-mid);
+      color: var(--white);
+      font-size: 22px;
+      font-weight: 700;
+      border-radius: 50%;
+      margin-bottom: 14px;
+    }
+    .step h3 { font-size: 17px; color: var(--green-dark); margin-bottom: 6px; }
+    .step p { font-size: 15px; color: var(--text-mid); }
+
+    /* ===================== WHAT YOU GET ===================== */
+    .offer {
+      padding: 60px 20px;
+    }
+    .offer h2 {
+      text-align: center;
+      font-size: clamp(22px, 4vw, 32px);
+      color: var(--green-dark);
+      margin-bottom: 8px;
+    }
+    .offer-subtitle {
+      text-align: center;
+      font-size: 18px;
+      color: var(--text-mid);
+      margin-bottom: 40px;
+    }
+    .offer-grid {
+      display: grid;
+      gap: 20px;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    .offer-item {
+      display: flex;
+      gap: 16px;
+      padding: 20px;
+      background: var(--white);
+      border-radius: 10px;
+      border-left: 4px solid var(--green-light);
+      box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+    }
+    .offer-icon {
+      font-size: 28px;
+      flex-shrink: 0;
+      width: 48px; height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--cream);
+      border-radius: 10px;
+    }
+    .offer-item h3 { font-size: 17px; color: var(--green-dark); margin-bottom: 4px; }
+    .offer-item p { font-size: 15px; color: var(--text-mid); }
+    .offer-item .tier-badge {
+      display: inline-block;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .tier-1 { background: #E8F5E1; color: var(--green-mid); }
+    .tier-2 { background: #FFF4D6; color: #8B6914; }
+
+    /* ===================== PRICING ===================== */
+    .pricing {
+      padding: 60px 20px;
+      background: var(--white);
+      text-align: center;
+    }
+    .pricing h2 {
+      font-size: clamp(22px, 4vw, 32px);
+      color: var(--green-dark);
+      margin-bottom: 8px;
+    }
+    .pricing-sub {
+      font-size: 18px;
+      color: var(--text-mid);
+      margin-bottom: 12px;
+    }
+    .pricing-flat {
+      font-size: 15px;
+      color: var(--green-mid);
+      font-weight: 600;
+      margin-bottom: 36px;
+    }
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 24px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .price-card {
+      border-radius: 16px;
+      padding: 36px 28px;
+      text-align: left;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+    .price-card-standard {
+      background: var(--white);
+      border: 2px solid #E0E0D8;
+      color: var(--text-dark);
+    }
+    .price-card-bundle {
+      background: linear-gradient(135deg, var(--green-dark), var(--green-mid));
+      color: var(--white);
+      box-shadow: 0 8px 30px rgba(45,80,22,0.3);
+      border: 2px solid transparent;
+    }
+    .price-card-addon {
+      background: var(--white);
+      border: 2px solid var(--gold);
+      color: var(--text-dark);
+    }
+
+    .card-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .price-card-standard .card-label { color: var(--green-mid); }
+    .price-card-bundle .card-label { color: var(--gold-light); }
+    .price-card-addon .card-label { color: var(--gold); }
+
+    .price-card h3 {
+      font-size: 22px;
+      margin-bottom: 4px;
+    }
+    .price-card-standard h3 { color: var(--green-dark); }
+    .price-card-addon h3 { color: var(--green-dark); }
+
+    .price-card .price {
+      font-size: 44px;
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 2px;
+    }
+    .price-card .price-note {
+      font-size: 13px;
+      opacity: 0.7;
+      margin-bottom: 20px;
+    }
+    .price-features {
+      text-align: left;
+      list-style: none;
+      margin-bottom: 24px;
+      flex-grow: 1;
+    }
+    .price-features li {
+      padding: 7px 0;
+      font-size: 15px;
+      position: relative;
+      padding-left: 26px;
+    }
+    .price-features li::before {
+      content: '\2713';
+      position: absolute;
+      left: 0;
+      font-weight: 700;
+    }
+    .price-card-standard .price-features li::before { color: var(--green-mid); }
+    .price-card-bundle .price-features li::before { color: var(--gold-light); }
+    .price-card-addon .price-features li::before { color: var(--gold); }
+
+    .price-cta {
+      display: block;
+      text-align: center;
+      padding: 14px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .price-card-standard .price-cta {
+      background: var(--green-mid);
+      color: var(--white);
+    }
+    .price-card-standard .price-cta:hover { background: var(--green-dark); }
+    .price-card-bundle .price-cta {
+      background: var(--gold);
+      color: var(--green-dark);
+    }
+    .price-card-bundle .price-cta:hover { background: var(--gold-light); }
+    .price-card-addon .price-cta {
+      background: var(--gold);
+      color: var(--green-dark);
+    }
+    .price-card-addon .price-cta:hover { background: var(--gold-light); }
+
+    .save-badge {
+      position: absolute;
+      top: -14px;
+      right: 20px;
+      background: var(--gold);
+      color: var(--green-dark);
+      font-size: 13px;
+      font-weight: 700;
+      padding: 5px 14px;
+      border-radius: 50px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    /* ===================== GUARANTEE ===================== */
+    .guarantee {
+      padding: 60px 20px;
+      text-align: center;
+    }
+    .guarantee-box {
+      max-width: 600px;
+      margin: 0 auto;
+      background: var(--white);
+      border: 2px solid var(--gold);
+      border-radius: 16px;
+      padding: 40px 32px;
+    }
+    .guarantee-icon { font-size: 48px; margin-bottom: 12px; }
+    .guarantee-box h2 { font-size: 24px; color: var(--green-dark); margin-bottom: 12px; }
+    .guarantee-box p { font-size: 16px; color: var(--text-mid); }
+
+    /* ===================== FAQ ===================== */
+    .faq {
+      padding: 60px 20px;
+      background: var(--white);
+    }
+    .faq h2 {
+      text-align: center;
+      font-size: clamp(22px, 4vw, 32px);
+      color: var(--green-dark);
+      margin-bottom: 32px;
+    }
+    .faq-list { max-width: 650px; margin: 0 auto; }
+    .faq-item {
+      border-bottom: 1px solid #E5E5E5;
+      padding: 0;
+    }
+    .faq-question {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 0;
+      cursor: pointer;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text-dark);
+      font-family: inherit;
+    }
+    .faq-question:hover { color: var(--green-mid); }
+    .faq-arrow {
+      font-size: 20px;
+      transition: transform 0.2s;
+      color: var(--text-light);
+      flex-shrink: 0;
+      margin-left: 16px;
+    }
+    .faq-item.open .faq-arrow { transform: rotate(180deg); }
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease, padding 0.3s ease;
+    }
+    .faq-item.open .faq-answer {
+      max-height: 200px;
+    }
+    .faq-answer p {
+      font-size: 15px;
+      color: var(--text-mid);
+      padding-bottom: 20px;
+    }
+
+    /* ===================== RESOURCES ===================== */
+    .resources {
+      padding: 60px 20px;
+    }
+    .resources h2 {
+      text-align: center;
+      font-size: clamp(22px, 4vw, 32px);
+      color: var(--green-dark);
+      margin-bottom: 12px;
+    }
+    .resources-sub {
+      text-align: center;
+      font-size: 17px;
+      color: var(--text-mid);
+      margin-bottom: 36px;
+      max-width: 550px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .resources-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .resource-card {
+      background: var(--white);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      border-left: 4px solid var(--green-light);
+      text-decoration: none;
+      color: inherit;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .resource-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    }
+    .resource-card h3 { font-size: 16px; color: var(--green-dark); margin-bottom: 6px; }
+    .resource-card p { font-size: 14px; color: var(--text-mid); }
+    .resource-tag {
+      display: inline-block;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: #E8F5E1;
+      color: var(--green-mid);
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    /* ===================== FINAL CTA ===================== */
+    .final-cta {
+      padding: 80px 20px;
+      text-align: center;
+      background: linear-gradient(135deg, var(--green-dark) 0%, var(--green-mid) 100%);
+      color: var(--white);
+    }
+    .final-cta h2 {
+      font-size: clamp(22px, 4vw, 32px);
+      margin-bottom: 12px;
+    }
+    .final-cta p {
+      font-size: 18px;
+      opacity: 0.9;
+      max-width: 500px;
+      margin: 0 auto 28px;
+    }
+
+    /* ===================== FOOTER ===================== */
+    footer {
+      padding: 40px 20px;
+      text-align: center;
+      background: var(--green-dark);
+      color: rgba(255,255,255,0.6);
+      font-size: 14px;
+    }
+    footer a { color: rgba(255,255,255,0.8); text-decoration: none; }
+    footer a:hover { color: var(--white); }
+    .footer-inner {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    /* ===================== MODAL ===================== */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--white);
+      border-radius: 16px;
+      padding: 40px 32px;
+      max-width: 440px;
+      width: 100%;
+      position: relative;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+    .modal-close {
+      position: absolute;
+      top: 16px; right: 16px;
+      background: none; border: none;
+      font-size: 24px;
+      color: var(--text-light);
+      cursor: pointer;
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 6px;
+    }
+    .modal-close:hover { background: var(--cream); color: var(--text-dark); }
+    .modal h2 {
+      font-size: 24px;
+      color: var(--green-dark);
+      margin-bottom: 6px;
+    }
+    .modal .modal-sub {
+      font-size: 15px;
+      color: var(--text-mid);
+      margin-bottom: 24px;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-dark);
+      margin-bottom: 6px;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid #D5D5D0;
+      border-radius: 8px;
+      font-size: 15px;
+      font-family: inherit;
+      transition: border-color 0.15s;
+      background: var(--cream);
+    }
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--green-mid);
+      box-shadow: 0 0 0 3px rgba(74,124,35,0.1);
+    }
+    .form-btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--green-mid);
+      color: var(--white);
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+      margin-top: 8px;
+    }
+    .form-btn:hover { background: var(--green-dark); }
+    .form-divider {
+      text-align: center;
+      margin: 20px 0;
+      font-size: 14px;
+      color: var(--text-light);
+      position: relative;
+    }
+    .form-divider::before,
+    .form-divider::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: 40%;
+      height: 1px;
+      background: #E0E0D8;
+    }
+    .form-divider::before { left: 0; }
+    .form-divider::after { right: 0; }
+    .form-switch {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 14px;
+      color: var(--text-mid);
+    }
+    .form-switch a {
+      color: var(--green-mid);
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .form-switch a:hover { text-decoration: underline; }
+
+    /* ===================== DASHBOARD ===================== */
+    .dashboard {
+      display: none;
+      min-height: 100vh;
+      background: var(--cream);
+    }
+    .dashboard.active { display: block; }
+    .dash-header {
+      background: var(--white);
+      border-bottom: 1px solid #E5E5E5;
+      padding: 20px 24px;
+    }
+    .dash-header-inner {
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .dash-welcome {
+      font-size: 15px;
+      color: var(--text-mid);
+    }
+    .dash-welcome strong { color: var(--green-dark); }
+    .dash-signout {
+      background: none;
+      border: 1px solid #D5D5D0;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 14px;
+      color: var(--text-mid);
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .dash-signout:hover { background: var(--cream); }
+    .dash-content {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+    .dash-content h1 {
+      font-size: 28px;
+      color: var(--green-dark);
+      margin-bottom: 8px;
+    }
+    .dash-content .dash-subtitle {
+      font-size: 16px;
+      color: var(--text-mid);
+      margin-bottom: 32px;
+    }
+    .dash-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+      margin-bottom: 36px;
+    }
+    .dash-stat {
+      background: var(--white);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .dash-stat-label {
+      font-size: 13px;
+      color: var(--text-light);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .dash-stat-value {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--green-dark);
+    }
+
+    .audit-table {
+      background: var(--white);
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      overflow: hidden;
+    }
+    .audit-table-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid #E5E5E5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .audit-table-header h2 {
+      font-size: 18px;
+      color: var(--green-dark);
+    }
+    .audit-new-btn {
+      background: var(--green-mid);
+      color: var(--white);
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .audit-new-btn:hover { background: var(--green-dark); }
+
+    .audit-row {
+      display: grid;
+      grid-template-columns: 1fr 120px 140px 100px;
+      align-items: center;
+      padding: 16px 24px;
+      border-bottom: 1px solid #F0F0EB;
+      gap: 12px;
+    }
+    .audit-row:last-child { border-bottom: none; }
+    .audit-row-head {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-light);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: var(--cream);
+    }
+    .audit-name { font-weight: 600; color: var(--text-dark); font-size: 15px; }
+    .audit-name span { display: block; font-weight: 400; font-size: 13px; color: var(--text-light); }
+    .audit-date { font-size: 14px; color: var(--text-mid); }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 50px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .status-submitted { background: #FFF4D6; color: #8B6914; }
+    .status-review { background: #DBEAFE; color: #1E40AF; }
+    .status-complete { background: #E8F5E1; color: var(--green-mid); }
+
+    .audit-action a {
+      color: var(--green-mid);
+      font-weight: 600;
+      font-size: 14px;
+      text-decoration: none;
+    }
+    .audit-action a:hover { text-decoration: underline; }
+
+    .dash-empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-light);
+    }
+    .dash-empty p { font-size: 16px; margin-bottom: 20px; }
+
+    /* ===================== PROGRESS TRACKER ===================== */
+    .progress-tracker {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      margin: 24px auto 36px;
+      max-width: 600px;
+    }
+    .progress-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      position: relative;
+    }
+    .progress-dot {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      z-index: 1;
+    }
+    .progress-dot.done {
+      background: var(--green-mid);
+      color: var(--white);
+    }
+    .progress-dot.active {
+      background: var(--gold);
+      color: var(--green-dark);
+      box-shadow: 0 0 0 4px rgba(212,168,67,0.25);
+    }
+    .progress-dot.pending {
+      background: #E0E0D8;
+      color: var(--text-light);
+    }
+    .progress-label {
+      font-size: 12px;
+      color: var(--text-mid);
+      text-align: center;
+    }
+    .progress-line {
+      flex: 1;
+      height: 3px;
+      background: #E0E0D8;
+      margin-bottom: 28px;
+    }
+    .progress-line.done { background: var(--green-mid); }
+
+    /* hide main site when dashboard is visible */
+    body.dashboard-mode .main-site { display: none; }
+
+    /* ===================== MOBILE ===================== */
+    @media (max-width: 768px) {
+      .audit-row { grid-template-columns: 1fr 1fr; gap: 8px; }
+      .audit-row-head { display: none; }
+    }
+    @media (max-width: 600px) {
+      .hero { padding: 40px 16px 60px; }
+      .problem-stats { grid-template-columns: 1fr; }
+      .steps { grid-template-columns: 1fr; gap: 20px; }
+      .pricing-grid { grid-template-columns: 1fr; }
+      .price-card { padding: 28px 20px; }
+      .resources-grid { grid-template-columns: 1fr; }
+      .modal { padding: 28px 20px; }
+      .progress-label { font-size: 11px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="main-site">
+  <!-- ==================== NAVBAR ==================== -->
+  <nav class="navbar">
+    <div class="navbar-inner">
+      <a href="#" class="nav-logo">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" height="40">
+          <path d="M12 8 L38 2 L64 8 L64 38 Q64 58 38 70 Q12 58 12 38 Z" fill="#2D5016" stroke="#4A7C23" stroke-width="1.5"/>
+          <line x1="38" y1="60" x2="38" y2="20" stroke="#D4A843" stroke-width="2" stroke-linecap="round"/>
+          <ellipse cx="33" cy="24" rx="4" ry="7" fill="#D4A843" transform="rotate(-20 33 24)" opacity="0.9"/>
+          <ellipse cx="33" cy="36" rx="4" ry="7" fill="#D4A843" transform="rotate(-20 33 36)" opacity="0.9"/>
+          <ellipse cx="34" cy="48" rx="3.5" ry="6" fill="#D4A843" transform="rotate(-15 34 48)" opacity="0.8"/>
+          <ellipse cx="43" cy="24" rx="4" ry="7" fill="#D4A843" transform="rotate(20 43 24)" opacity="0.9"/>
+          <ellipse cx="43" cy="36" rx="4" ry="7" fill="#D4A843" transform="rotate(20 43 36)" opacity="0.9"/>
+          <ellipse cx="42" cy="48" rx="3.5" ry="6" fill="#D4A843" transform="rotate(15 42 48)" opacity="0.8"/>
+          <ellipse cx="38" cy="18" rx="3" ry="5" fill="#D4A843" opacity="0.9"/>
+          <polyline points="26,38 34,46 52,26" fill="none" stroke="#FAFAF5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+          <text x="76" y="42" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="800" fill="#2D5016" letter-spacing="1">FARM</text>
+          <text x="178" y="42" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="800" fill="#4A7C23" letter-spacing="1">GUARD</text>
+          <text x="77" y="60" font-family="Arial, Helvetica, sans-serif" font-size="11" fill="#8A8A7A" letter-spacing="2.5">INDEPENDENT POLICY AUDIT</text>
+        </svg>
+      </a>
+      <button class="nav-toggle" onclick="document.querySelector('.nav-links').classList.toggle('open')" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-links">
+        <li><a href="#how-it-works">How It Works</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li><a href="#resources">Resources</a></li>
+        <li><a href="/signin.html" class="nav-signin">Sign In</a></li>
+        <li><a href="/signup.html" class="nav-cta">Start Policy Audit</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- ==================== HERO ==================== -->
+  <section class="hero">
+    <div class="hero-badge">Independent Crop Insurance Audit</div>
+    <h1>We Find The Money Your Crop Insurance Agent <span>Left On The Table</span></h1>
+    <p class="hero-sub">Get an independent, no-nonsense review of your crop insurance policy. No agent relationship. No upsell. Just a clear report you take straight to your agent.</p>
+    <a href="/signup.html" class="hero-cta">Start Your Policy Audit &mdash; $29.99</a>
+    <p class="hero-flat">Flat rate for every farm. 100 acres or 10,000 &mdash; same price.</p>
+    <p class="hero-guarantee">Even if nothing is found, you get peace of mind from an independent, commission-free review.</p>
+  </section>
+
+  <!-- ==================== PROBLEM ==================== -->
+  <section class="problem">
+    <div class="container">
+      <h2>Your Agent Works For The Insurance Company. Who Works For You?</h2>
+      <p class="problem-lead">Most commercial farmers have never had an independent set of eyes on their crop insurance. Here's what we see when we look:</p>
+      <div class="problem-stats">
+        <div class="stat-card">
+          <div class="stat-number">85%</div>
+          <div class="stat-text">of policies we audit have at least one coverage gap the farmer didn't know about</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">$2,400</div>
+          <div class="stat-text">average savings or missed coverage found per audit on 500+ acre operations</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">0</div>
+          <div class="stat-text">meetings required. Submit your docs, get your report, bring it to your agent.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== HOW IT WORKS ==================== -->
+  <section class="process" id="how-it-works">
+    <div class="container">
+      <h2>How It Works</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <h3>Submit Your Info</h3>
+          <p>Upload your current policy documents and answer a few questions about your operation. Takes about 10 minutes.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <h3>We Analyze Everything</h3>
+          <p>Your policy is reviewed independently &mdash; no agent relationship, no bias, no conflicts of interest. No commissions involved.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <h3>Get Your Report</h3>
+          <p>Receive a comprehensive written report with specific recommendations you take straight to your agent.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== WHAT YOU GET ==================== -->
+  <section class="offer">
+    <div class="container">
+      <h2>What's Included</h2>
+      <p class="offer-subtitle">All of this is included in every $29.99 audit &mdash; no add-ons, no upsells.</p>
+      <div class="offer-grid">
+        <div class="offer-item">
+          <div class="offer-icon">&#128196;</div>
+          <div>
+            <span class="tier-badge tier-1">Included</span>
+            <h3>Full Policy Review</h3>
+            <p>Every page of your current policy reviewed line-by-line by an independent analyst &mdash; not someone earning commission on your premiums.</p>
+          </div>
+        </div>
+        <div class="offer-item">
+          <div class="offer-icon">&#128269;</div>
+          <div>
+            <span class="tier-badge tier-1">Included</span>
+            <h3>Coverage Gap Analysis</h3>
+            <p>Identification of mismatched unit structures, incorrect practice codes, and gaps that leave you exposed when you need protection most.</p>
+          </div>
+        </div>
+        <div class="offer-item">
+          <div class="offer-icon">&#9989;</div>
+          <div>
+            <span class="tier-badge tier-1">Included</span>
+            <h3>Plain-English Summary</h3>
+            <p>Clear, jargon-free explanation of what your policy covers, what it doesn't, and what to ask your agent about.</p>
+          </div>
+        </div>
+        <div class="offer-item">
+          <div class="offer-icon">&#128200;</div>
+          <div>
+            <span class="tier-badge tier-1">Included</span>
+            <h3>Premium Savings Analysis</h3>
+            <p>Side-by-side comparison of 2&ndash;3 alternative coverage scenarios showing where you may be overpaying or underinsured.</p>
+          </div>
+        </div>
+        <div class="offer-item">
+          <div class="offer-icon">&#128203;</div>
+          <div>
+            <span class="tier-badge tier-1">Included</span>
+            <h3>APH Record Check</h3>
+            <p>Review of your Actual Production History for reporting errors that could be quietly costing you money every year.</p>
+          </div>
+        </div>
+        <div class="offer-item">
+          <div class="offer-icon">&#128221;</div>
+          <div>
+            <span class="tier-badge tier-1">Included</span>
+            <h3>Agent-Ready Action Plan</h3>
+            <p>Written recommendations with exact language you can use when you walk into your agent's office and say &ldquo;let's fix this.&rdquo;</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== PRICING ==================== -->
+  <section class="pricing" id="pricing">
+    <div class="container">
+      <h2>Simple, Flat-Rate Pricing</h2>
+      <p class="pricing-sub">No hourly rates. No hidden costs. No commissions. Ever.</p>
+      <p class="pricing-flat">Same price whether you farm 100 acres or 10,000.</p>
+
+      <div style="max-width:400px; margin:0 auto;">
+
+        <div class="price-card price-card-bundle">
+          <div class="card-label">Everything Included</div>
+          <h3>Policy Clarity Audit</h3>
+          <div class="price">$29.99</div>
+          <div class="price-note">One-time flat fee &mdash; all farms, all sizes</div>
+          <ul class="price-features">
+            <li>Full independent policy review</li>
+            <li>Coverage gap identification</li>
+            <li>Plain-English policy summary</li>
+            <li>Premium savings analysis (2&ndash;3 scenarios)</li>
+            <li>APH record review for errors</li>
+            <li>Agent-ready action plan with exact language</li>
+            <li>Delivered in 5 business days</li>
+            <li>Peace of mind &mdash; even if nothing is found</li>
+          </ul>
+          <a href="/signup.html" class="price-cta">Start Your Audit &mdash; $29.99</a>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== GUARANTEE ==================== -->
+  <section class="guarantee">
+    <div class="guarantee-box">
+      <div class="guarantee-icon">&#128170;</div>
+      <h2>The FarmGuard Promise</h2>
+      <p>Every policy deserves an independent review. Even if we find zero issues, you get the peace of mind that someone outside the commission system looked at your coverage. That's worth the price on its own. And if we do find something? You'll walk away with a specific plan to fix it.</p>
+    </div>
+  </section>
+
+  <!-- ==================== FAQ ==================== -->
+  <section class="faq" id="faq">
+    <div class="container">
+      <h2>Common Questions</h2>
+      <div class="faq-list">
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+            Are you trying to sell me insurance?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-answer">
+            <p>No. We are not an insurance agency and we do not sell policies. We are an independent review service. Our only job is to tell you what you have, what you're missing, and what to ask your agent to change.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+            What documents do I need to send?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-answer">
+            <p>Your current crop insurance policy declarations page, schedule of insurance, and any endorsements. If you have your APH records, those are helpful too. We'll walk you through exactly what to upload.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+            How long does the audit take?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-answer">
+            <p>You'll have your completed report within 5 business days of submitting your documents. No meetings, no phone tag &mdash; just a thorough written analysis delivered to your inbox.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+            What if my policy is fine?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-answer">
+            <p>Then you get peace of mind knowing an independent, commission-free analyst confirmed your coverage is solid. That certainty alone is worth more than the cost of the audit.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+            Will this upset my insurance agent?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-answer">
+            <p>A good agent welcomes accountability. The report gives your agent specific, actionable recommendations that make their job easier &mdash; not harder.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+            Why is this so affordable?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-answer">
+            <p>We keep it simple. No meetings, no office overhead, no commissions. At $29.99, it's a flat-fee review that's a no-brainer for any farm operation, regardless of size.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+            Is the price the same for all farm sizes?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-answer">
+            <p>Yes. Whether you're running 200 acres or 5,000, the price is the same. Every farmer deserves an independent review, and we don't think your acreage should determine the cost of good advice.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== RESOURCES ==================== -->
+  <section class="resources" id="resources">
+    <div class="container">
+      <h2>Farmer Resources</h2>
+      <p class="resources-sub">Free tools and information to help you make better crop insurance decisions.</p>
+      <div class="resources-grid">
+        <a href="https://ewebapp.rma.usda.gov/apps/costestimator/" target="_blank" rel="noopener" class="resource-card">
+          <span class="resource-tag">USDA Tool</span>
+          <h3>RMA Premium Estimator</h3>
+          <p>Calculate estimated premiums for different coverage levels and plans of insurance directly from the USDA.</p>
+        </a>
+        <a href="https://www.rma.usda.gov/SummaryOfBusiness" target="_blank" rel="noopener" class="resource-card">
+          <span class="resource-tag">USDA Data</span>
+          <h3>Summary of Business</h3>
+          <p>See crop insurance participation data, loss ratios, and indemnity payments by state, county, and crop.</p>
+        </a>
+        <a href="https://quickstats.nass.usda.gov/" target="_blank" rel="noopener" class="resource-card">
+          <span class="resource-tag">USDA Data</span>
+          <h3>NASS Quick Stats</h3>
+          <p>County-level yield data, production history, and agricultural statistics for benchmarking your APH.</p>
+        </a>
+        <a href="https://www.rma.usda.gov/en/Topics/Important-Dates" target="_blank" rel="noopener" class="resource-card">
+          <span class="resource-tag">Deadlines</span>
+          <h3>Key Insurance Dates</h3>
+          <p>Sales closing dates, acreage reporting deadlines, and other critical dates by crop and state.</p>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== FINAL CTA ==================== -->
+  <section class="final-cta">
+    <h2>Stop Wondering. Start Knowing.</h2>
+    <p>Your crop insurance is the most expensive line item that no one ever double-checks. Get an independent review before renewal season.</p>
+    <a href="/signup.html" class="hero-cta">Start Your Audit &mdash; $29.99</a>
+  </section>
+
+  <!-- ==================== FOOTER ==================== -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-links">
+        <a href="#how-it-works">How It Works</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#faq">FAQ</a>
+        <a href="#resources">Resources</a>
+        <a href="mailto:audit@farmguard.com">Contact</a>
+      </div>
+      <p>&copy; 2026 FarmGuard. Independent crop insurance review for commercial farmers.</p>
+      <p style="margin-top:8px; font-size:12px; opacity:0.5;">FarmGuard is not a licensed insurance agency, broker, or adjuster. We do not sell insurance products.</p>
+    </div>
+  </footer>
+  </div><!-- end .main-site -->
+
+
+  <!-- ==================== JAVASCRIPT ==================== -->
+  <script>
+    // Mobile nav toggle
+    // FAQ accordion is handled by inline onclick attributes
+  </script>
+
+</body>
+</html>

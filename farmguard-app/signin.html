@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In | FarmGuard</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-box">
+      <div class="logo-wrap">
+        <a href="/"><img src="/assets/farmguard-logo.svg" alt="FarmGuard"></a>
+      </div>
+      <h1>Welcome Back</h1>
+      <p class="auth-sub">Sign in to check your audit progress.</p>
+
+      <div id="alertArea"></div>
+
+      <form id="signinForm">
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <input type="email" id="email" placeholder="you@farm.com" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="Enter your password" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block btn-lg" id="submitBtn">
+          Sign In
+        </button>
+      </form>
+
+      <div style="text-align:center; margin-top:12px;">
+        <a href="#" id="forgotLink" style="font-size:14px; color:var(--text-light);">Forgot password?</a>
+      </div>
+
+      <div class="form-switch">
+        Don't have an account? <a href="/signup.html">Create one free</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/supabase-config.js"></script>
+  <script>
+    // Redirect if already logged in
+    redirectIfAuthed();
+
+    document.getElementById('signinForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Signing in...';
+
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        window.location.href = '/dashboard.html';
+      } catch (err) {
+        showAlert(document.getElementById('alertArea'), 'error', err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Sign In';
+      }
+    });
+
+    // Forgot password
+    document.getElementById('forgotLink').addEventListener('click', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      if (!email) {
+        showAlert(document.getElementById('alertArea'), 'warning', 'Enter your email address first, then click forgot password.');
+        return;
+      }
+      try {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin + '/signin.html'
+        });
+        if (error) throw error;
+        showAlert(document.getElementById('alertArea'), 'success', 'Password reset email sent. Check your inbox.');
+      } catch (err) {
+        showAlert(document.getElementById('alertArea'), 'error', err.message);
+      }
+    });
+  </script>
+</body>
+</html>

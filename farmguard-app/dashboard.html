@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard | FarmGuard</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <!-- TOPBAR -->
+  <nav class="topbar">
+    <div class="topbar-inner">
+      <a href="/dashboard.html" class="topbar-logo">
+        <img src="/assets/farmguard-logo.svg" alt="FarmGuard">
+      </a>
+      <div class="topbar-right">
+        <span class="topbar-user">Welcome, <strong id="userName">Farmer</strong></span>
+        <button class="btn btn-outline btn-sm" onclick="signOut()">Sign Out</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- APP LAYOUT -->
+  <div class="app-layout">
+    <aside class="sidebar">
+      <ul class="sidebar-nav">
+        <li><a href="/dashboard.html" class="active">&#128202; Dashboard</a></li>
+        <li><a href="#" id="newAuditLink">&#10010; New Audit</a></li>
+        <li><a href="#" onclick="signOut(); return false;">&#9654; Sign Out</a></li>
+      </ul>
+    </aside>
+
+    <main class="main-content">
+      <h1>Your Dashboard</h1>
+      <p class="page-subtitle">Track your audits and view completed reports.</p>
+
+      <!-- STATS -->
+      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-bottom:32px;">
+        <div class="card" style="padding:20px;">
+          <div style="font-size:13px; color:var(--text-light); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Active Audits</div>
+          <div id="statActive" style="font-size:32px; font-weight:800; color:var(--green-dark);">0</div>
+        </div>
+        <div class="card" style="padding:20px;">
+          <div style="font-size:13px; color:var(--text-light); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Completed</div>
+          <div id="statComplete" style="font-size:32px; font-weight:800; color:var(--green-dark);">0</div>
+        </div>
+        <div class="card" style="padding:20px;">
+          <div style="font-size:13px; color:var(--text-light); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Total Savings Found</div>
+          <div id="statSavings" style="font-size:32px; font-weight:800; color:var(--green-dark);">--</div>
+        </div>
+      </div>
+
+      <!-- AUDIT LIST -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Your Audits</h2>
+          <button class="btn btn-primary btn-sm" id="newAuditBtn">+ New Audit</button>
+        </div>
+        <div id="auditList">
+          <!-- Populated by JS -->
+        </div>
+        <div id="emptyState" style="display:none; text-align:center; padding:48px 20px; color:var(--text-light);">
+          <div style="font-size:48px; margin-bottom:12px;">&#128196;</div>
+          <p style="font-size:16px; margin-bottom:20px;">You don't have any audits yet.</p>
+          <button class="btn btn-primary" id="emptyNewBtn">Start Your First Audit</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- NEW AUDIT MODAL -->
+  <div class="loading-overlay" id="newAuditModal" style="display:none; background:rgba(0,0,0,0.5);">
+    <div class="auth-box" style="max-width:480px;">
+      <h1 style="text-align:center;">Start a New Audit</h1>
+      <p class="auth-sub">We'll review your crop insurance policy and find what your agent missed.</p>
+      <form id="newAuditForm">
+        <div class="form-group">
+          <label for="auditFarmName">Farm / Business Name</label>
+          <input type="text" id="auditFarmName" placeholder="Smith Family Farms" required>
+        </div>
+        <div class="form-group">
+          <label for="auditAcres">Approximate Total Acres</label>
+          <input type="number" id="auditAcres" placeholder="e.g. 1200" min="1" required>
+        </div>
+        <div class="form-group">
+          <label for="auditCrops">Primary Crops</label>
+          <input type="text" id="auditCrops" placeholder="e.g. Corn, Soybeans, Wheat">
+          <div class="form-hint">Comma-separated list of your main crops</div>
+        </div>
+        <div class="form-group">
+          <label for="auditCounty">County</label>
+          <input type="text" id="auditCounty" placeholder="e.g. McLean County">
+        </div>
+        <div style="display:flex; gap:12px; margin-top:8px;">
+          <button type="button" class="btn btn-outline btn-block" onclick="closeNewAuditModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-block" id="createAuditBtn">Create Audit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/supabase-config.js"></script>
+  <script>
+    let currentUser = null;
+
+    async function init() {
+      currentUser = await requireAuth();
+      if (!currentUser) return;
+
+      // Set user name
+      const name = currentUser.user_metadata?.full_name || currentUser.email.split('@')[0];
+      document.getElementById('userName').textContent = name;
+
+      // Pre-fill farm name in new audit modal
+      const farmName = currentUser.user_metadata?.farm_name;
+      if (farmName) document.getElementById('auditFarmName').value = farmName;
+
+      await loadAudits();
+    }
+
+    async function loadAudits() {
+      const audits = await getUserAudits(currentUser.id);
+
+      const active = audits.filter(a => a.status !== 'complete').length;
+      const complete = audits.filter(a => a.status === 'complete').length;
+      document.getElementById('statActive').textContent = active;
+      document.getElementById('statComplete').textContent = complete;
+
+      // Calculate total savings
+      const totalSavings = audits
+        .filter(a => a.savings_found)
+        .reduce((sum, a) => sum + (a.savings_found || 0), 0);
+      document.getElementById('statSavings').textContent = totalSavings > 0 ? '$' + totalSavings.toLocaleString() : '--';
+
+      const listEl = document.getElementById('auditList');
+      const emptyEl = document.getElementById('emptyState');
+
+      if (audits.length === 0) {
+        listEl.style.display = 'none';
+        emptyEl.style.display = 'block';
+        return;
+      }
+
+      listEl.style.display = 'block';
+      emptyEl.style.display = 'none';
+      listEl.innerHTML = audits.map(audit => `
+        <div class="audit-queue-item" style="cursor:pointer;" onclick="goToAudit('${audit.id}', '${audit.status}')">
+          <div class="queue-info">
+            <h4>${audit.farm_name || 'Policy Audit'} <span style="font-weight:400; color:var(--text-light); font-size:13px;">${audit.audit_id}</span></h4>
+            <p>${audit.crops || 'Crops not specified'} &middot; ${audit.acres ? audit.acres + ' acres' : ''} &middot; Started ${formatDate(audit.created_at)}</p>
+          </div>
+          <div class="queue-actions">
+            <span class="badge ${statusBadgeClass(audit.status)}">${statusLabel(audit.status)}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function goToAudit(auditId, status) {
+      if (status === 'documents_pending') {
+        window.location.href = '/upload.html?audit=' + auditId;
+      } else if (status === 'questionnaire_pending') {
+        window.location.href = '/questionnaire.html?audit=' + auditId;
+      } else if (status === 'payment_pending' || status === 'report_ready') {
+        window.location.href = '/report.html?audit=' + auditId;
+      } else {
+        window.location.href = '/report.html?audit=' + auditId;
+      }
+    }
+
+    // New Audit Modal
+    function openNewAuditModal() {
+      document.getElementById('newAuditModal').style.display = 'flex';
+    }
+    function closeNewAuditModal() {
+      document.getElementById('newAuditModal').style.display = 'none';
+    }
+
+    document.getElementById('newAuditBtn').addEventListener('click', openNewAuditModal);
+    document.getElementById('newAuditLink').addEventListener('click', (e) => { e.preventDefault(); openNewAuditModal(); });
+    document.getElementById('emptyNewBtn').addEventListener('click', openNewAuditModal);
+
+    document.getElementById('newAuditModal').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('newAuditModal')) closeNewAuditModal();
+    });
+
+    document.getElementById('newAuditForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('createAuditBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Creating...';
+
+      try {
+        const farmName = document.getElementById('auditFarmName').value.trim();
+        const acres = document.getElementById('auditAcres').value;
+        const crops = document.getElementById('auditCrops').value.trim();
+        const county = document.getElementById('auditCounty').value.trim();
+
+        const auditId = 'FG-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 9999)).padStart(4, '0');
+
+        const { data, error } = await supabase
+          .from('audits')
+          .insert({
+            user_id: currentUser.id,
+            audit_id: auditId,
+            farm_name: farmName,
+            acres: parseInt(acres),
+            crops: crops,
+            county: county,
+            state: currentUser.user_metadata?.state || '',
+            status: 'documents_pending',
+            created_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        // Go to document upload page
+        window.location.href = '/upload.html?audit=' + data.id;
+      } catch (err) {
+        alert('Error creating audit: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Create Audit';
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>
