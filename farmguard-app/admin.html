@@ -7,14 +7,21 @@
   <link rel="stylesheet" href="/css/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    .admin-finding { padding: 16px; background: var(--cream); border-radius: 8px; margin-bottom: 12px; }
-    .admin-finding textarea { margin-top: 8px; }
+    .admin-finding { padding: 20px; background: var(--cream); border-radius: 8px; margin-bottom: 16px; border-left: 4px solid var(--border); }
+    .admin-finding.severity-critical { border-left-color: #D32F2F; }
+    .admin-finding.severity-warning { border-left-color: #F9A825; }
+    .admin-finding.severity-ok { border-left-color: var(--green-mid); }
+    .admin-finding textarea { margin-top: 4px; }
     .finding-controls { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
     .severity-select { padding: 8px 12px; border-radius: 6px; border: 1.5px solid var(--border); font-family: inherit; font-size: 14px; }
     .doc-thumb { width: 120px; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; }
     .admin-tab { padding: 10px 20px; border: none; background: none; font-size: 15px; font-weight: 500; cursor: pointer; color: var(--text-light); border-bottom: 2px solid transparent; font-family: inherit; }
     .admin-tab.active { color: var(--green-dark); border-bottom-color: var(--green-mid); }
     .tab-bar { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+    .field-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-light); margin-bottom: 2px; margin-top: 10px; }
+    .impact-banner { display: flex; align-items: center; gap: 16px; padding: 16px 20px; background: linear-gradient(135deg, var(--green-dark), var(--green-mid)); color: white; border-radius: 8px; margin-bottom: 16px; }
+    .impact-banner .impact-number { font-size: 28px; font-weight: 800; }
+    .impact-banner .impact-label { font-size: 14px; opacity: 0.9; }
   </style>
 </head>
 <body>
@@ -208,6 +215,20 @@
               <button class="btn btn-outline btn-sm" onclick="addFinding('${id}')">+ Add Finding</button>
             </div>
           </div>
+
+          ${findings.length > 0 ? `
+            <div class="impact-banner">
+              <div>
+                <div class="impact-number">$${findings.reduce((sum, f) => sum + (f.estimated_impact || 0), 0).toLocaleString()}</div>
+                <div class="impact-label">Total Estimated Impact</div>
+              </div>
+              <div style="margin-left:auto; text-align:right;">
+                <div style="font-size:20px; font-weight:700;">${findings.filter(f => f.severity === 'critical').length} Critical</div>
+                <div style="font-size:14px; opacity:0.9;">${findings.filter(f => f.severity === 'warning').length} Warnings &middot; ${findings.filter(f => f.severity === 'ok').length} OK</div>
+              </div>
+            </div>
+          ` : ''}
+
           <div id="findingsEditor">
             ${findings.length === 0 ? '<p style="color:var(--text-light);">No findings yet. Run AI Analysis or add findings manually.</p>' : ''}
             ${findings.map((f, i) => renderFindingEditor(f, i)).join('')}
@@ -216,9 +237,10 @@
 
         <!-- Executive Summary -->
         <div class="card" style="margin-bottom:20px;">
-          <h3 style="font-size:17px; color:var(--green-dark); margin-bottom:12px;">Executive Summary</h3>
+          <h3 style="font-size:17px; color:var(--green-dark); margin-bottom:4px;">Executive Summary</h3>
+          <p style="font-size:13px; color:var(--text-light); margin-bottom:12px;">This summary will be shown directly to the farmer at the top of their report. Review and edit before approving.</p>
           <div class="form-group" style="margin-bottom:0;">
-            <textarea id="execSummary" rows="4" placeholder="Write a brief executive summary of the audit findings...">${audit.executive_summary || ''}</textarea>
+            <textarea id="execSummary" rows="10" placeholder="The AI will draft this automatically when you run analysis. Review and edit before sending to the farmer...">${escapeHtml(audit.executive_summary || '')}</textarea>
           </div>
         </div>
 
@@ -254,36 +276,54 @@
     }
 
     function renderFindingEditor(finding, index) {
+      const severityColors = { critical: '#D32F2F', warning: '#F9A825', ok: '#4A7C23' };
+      const severityLabels = { critical: 'CRITICAL', warning: 'WARNING', ok: 'OK' };
       return `
-        <div class="admin-finding" id="finding-${finding.id}">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <strong style="font-size:15px;">Finding #${index + 1}</strong>
-            <select class="severity-select" onchange="updateFindingSeverity('${finding.id}', this.value)">
-              <option value="critical" ${finding.severity === 'critical' ? 'selected' : ''}>Critical</option>
-              <option value="warning" ${finding.severity === 'warning' ? 'selected' : ''}>Warning</option>
-              <option value="ok" ${finding.severity === 'ok' ? 'selected' : ''}>OK / Informational</option>
-            </select>
+        <div class="admin-finding severity-${finding.severity || 'warning'}" id="finding-${finding.id}">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <strong style="font-size:16px; color:var(--green-dark);">Finding #${index + 1}</strong>
+            <div style="display:flex; align-items:center; gap:12px;">
+              <select class="severity-select" onchange="updateFindingSeverity('${finding.id}', this.value); this.closest('.admin-finding').className='admin-finding severity-'+this.value;">
+                <option value="critical" ${finding.severity === 'critical' ? 'selected' : ''}>Critical</option>
+                <option value="warning" ${finding.severity === 'warning' ? 'selected' : ''}>Warning</option>
+                <option value="ok" ${finding.severity === 'ok' ? 'selected' : ''}>OK / Informational</option>
+              </select>
+              <button class="btn btn-danger btn-sm" onclick="deleteFinding('${finding.id}')" style="font-size:12px;">Delete</button>
+            </div>
           </div>
-          <div class="form-group" style="margin:8px 0 0;">
-            <input type="text" value="${finding.title || ''}" placeholder="Finding title" onchange="updateFindingField('${finding.id}', 'title', this.value)">
+
+          <div class="field-label">Title</div>
+          <div class="form-group" style="margin:0 0 0;">
+            <input type="text" value="${escapeHtml(finding.title || '')}" placeholder="Clear, specific title of the finding" onchange="updateFindingField('${finding.id}', 'title', this.value)">
           </div>
-          <div class="form-group" style="margin:8px 0 0;">
-            <textarea rows="2" placeholder="Description of the issue..." onchange="updateFindingField('${finding.id}', 'description', this.value)">${finding.description || ''}</textarea>
+
+          <div class="field-label">What Was Found</div>
+          <div class="form-group" style="margin:0 0 0;">
+            <textarea rows="3" placeholder="Detailed description — what's on the policy now vs. what it should be, with specific numbers..." onchange="updateFindingField('${finding.id}', 'description', this.value)">${escapeHtml(finding.description || '')}</textarea>
           </div>
-          <div class="form-group" style="margin:8px 0 0;">
-            <textarea rows="2" placeholder="Why it matters..." onchange="updateFindingField('${finding.id}', 'why_it_matters', this.value)">${finding.why_it_matters || ''}</textarea>
+
+          <div class="field-label">Why It Matters (Financial Impact)</div>
+          <div class="form-group" style="margin:0 0 0;">
+            <textarea rows="3" placeholder="Dollar impact explanation — what this costs the farmer, what happens in a loss year if not fixed..." onchange="updateFindingField('${finding.id}', 'why_it_matters', this.value)">${escapeHtml(finding.why_it_matters || '')}</textarea>
           </div>
-          <div class="form-group" style="margin:8px 0 0;">
-            <input type="text" value="${finding.agent_language || ''}" placeholder="Tell your agent: ..." onchange="updateFindingField('${finding.id}', 'agent_language', this.value)">
+
+          <div class="field-label">Script for Agent Conversation</div>
+          <div class="form-group" style="margin:0 0 0;">
+            <textarea rows="3" placeholder="First-person script the farmer can use with their agent: 'I'd like to discuss switching my corn from...'" onchange="updateFindingField('${finding.id}', 'agent_language', this.value)">${escapeHtml(finding.agent_language || '')}</textarea>
           </div>
-          <div class="form-group" style="margin:8px 0 0;">
-            <input type="number" value="${finding.estimated_impact || ''}" placeholder="Estimated $ impact" onchange="updateFindingField('${finding.id}', 'estimated_impact', parseInt(this.value) || 0)">
-          </div>
-          <div class="finding-controls">
-            <button class="btn btn-danger btn-sm" onclick="deleteFinding('${finding.id}')">Delete</button>
+
+          <div class="field-label">Estimated Cost Impact ($)</div>
+          <div class="form-group" style="margin:0 0 0;">
+            <input type="number" value="${finding.estimated_impact || ''}" placeholder="e.g. 2350" style="max-width:200px;" onchange="updateFindingField('${finding.id}', 'estimated_impact', parseInt(this.value) || 0)">
           </div>
         </div>
       `;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
     }
 
     async function viewDoc(filePath) {
@@ -303,7 +343,9 @@
         });
         if (!response.ok) throw new Error('AI analysis failed');
         const result = await response.json();
-        showAlert(document.getElementById('alertArea'), 'success', `AI analysis complete. ${result.findings_count || 0} findings generated.`);
+        const impactMsg = result.total_impact ? ` Estimated impact: $${result.total_impact.toLocaleString()}.` : '';
+        const summaryMsg = result.has_summary ? ' Executive summary drafted.' : '';
+        showAlert(document.getElementById('alertArea'), 'success', `AI analysis complete. ${result.findings_count || 0} findings generated.${impactMsg}${summaryMsg}`);
         await openReview(auditId);
       } catch (err) {
         showAlert(document.getElementById('alertArea'), 'error', 'AI analysis error: ' + err.message);
