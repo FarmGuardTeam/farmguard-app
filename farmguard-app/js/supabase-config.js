@@ -2,8 +2,7 @@
 // Replace these with your actual Supabase project values.
 // Find them at: https://supabase.com/dashboard → Your Project → Settings → API
 
-const SUPABASE_URL = 'sb_publishable_PN9AFBHcrIsn1cipl7vNJg_Bloy5BfF';       // e.g. https://abcdefghij.supabase.co
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpbmNtcHhleWxib3Fpd253dGplIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0MjgxMjQsImV4cCI6MjA5MjAwNDEyNH0.Sg3S5jyzhSG4PYCQGKJdFpZ_Ne_vxPQQ8_kUgxmue3Y'; // The "anon" / "public" key
+const SUPABASE_URL = 'https://rincmpxeylboqiwnwtje.supabase.co';const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpbmNtcHhleWxib3Fpd253dGplIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0MjgxMjQsImV4cCI6MjA5MjAwNDEyNH0.Sg3S5jyzhSG4PYCQGKJdFpZ_Ne_vxPQQ8_kUgxmue3Y'; // The "anon" / "public" key
 
 // Stripe payment link
 const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/7sYfZhgWB5brco74iH9oc00';
