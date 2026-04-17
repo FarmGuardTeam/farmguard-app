@@ -9,7 +9,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/7sYfZhgWB5brco74iH9oc00';
 
 // Initialize Supabase client
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ===================== AUTH HELPERS =====================
 
