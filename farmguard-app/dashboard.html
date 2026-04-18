@@ -32,6 +32,7 @@
     </aside>
 
     <main class="main-content">
+      <div id="notificationBanner" style="display:none;"></div>
       <h1>Your Dashboard</h1>
       <p class="page-subtitle">Track your audits and view completed reports.</p>
 
@@ -117,6 +118,44 @@
       if (farmName) document.getElementById('auditFarmName').value = farmName;
 
       await loadAudits();
+      await loadNotifications();
+    }
+
+    async function loadNotifications() {
+      try {
+        const { data: notifications } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', currentUser.id)
+          .eq('read', false)
+          .order('created_at', { ascending: false })
+          .limit(3);
+
+        if (notifications && notifications.length > 0) {
+          const banner = document.getElementById('notificationBanner');
+          banner.style.display = 'block';
+          banner.innerHTML = notifications.map(n => `
+            <div style="padding:16px 20px; background:#F0F7EC; border:1px solid #C5DEB5; border-radius:8px; margin-bottom:12px; position:relative;">
+              <button onclick="dismissNotification('${n.id}', this)" style="position:absolute; top:8px; right:12px; background:none; border:none; font-size:18px; color:var(--text-light); cursor:pointer;">&times;</button>
+              <h4 style="font-size:15px; color:var(--green-dark); margin-bottom:4px;">${n.title}</h4>
+              <p style="font-size:14px; color:var(--text-mid); white-space:pre-line;">${n.message}</p>
+              ${n.audit_id ? `<a href="/report.html?audit=${n.audit_id}" class="btn btn-primary btn-sm" style="margin-top:8px;">View Report</a>` : ''}
+            </div>
+          `).join('');
+        }
+      } catch (err) {
+        // Notifications table may not exist yet — that's fine
+        console.log('Notifications not available:', err.message);
+      }
+    }
+
+    async function dismissNotification(notifId, btn) {
+      btn.closest('div[style]').remove();
+      await supabase.from('notifications').update({ read: true }).eq('id', notifId);
+      // Hide banner if empty
+      if (document.getElementById('notificationBanner').innerHTML.trim() === '') {
+        document.getElementById('notificationBanner').style.display = 'none';
+      }
     }
 
     async function loadAudits() {
