@@ -236,9 +236,9 @@
       document.getElementById('paymentAuditInfo').textContent =
         auditData.audit_id + ' \u2022 ' + (auditData.farm_name || '') + ' \u2022 ' + (auditData.crops || '');
 
-      // Set Stripe link with audit context
-      const returnUrl = window.location.origin + '/report.html?audit=' + auditId + '&payment=success';
-      document.getElementById('payBtn').href = STRIPE_PAYMENT_LINK + '?client_reference_id=' + auditId;
+      // Set Stripe link with audit context and redirect back after payment
+      const returnUrl = encodeURIComponent(window.location.origin + '/report.html?audit=' + auditId + '&payment=success');
+      document.getElementById('payBtn').href = STRIPE_PAYMENT_LINK + '?client_reference_id=' + auditId + '&redirect_url=' + returnUrl;
 
       // Show preview teaser
       loadReportPreview();
