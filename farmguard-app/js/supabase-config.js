@@ -11,6 +11,20 @@ const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/7sYfZhgWB5brco74iH9oc00';
 // Initialize Supabase client
 supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// Auto sign-out when browser closes if "Keep me signed in" was unchecked
+window.addEventListener('beforeunload', () => {
+  if (sessionStorage.getItem('fg_temp_session') === 'true') {
+    // Clear the Supabase session from localStorage so it doesn't persist
+    // The user will need to sign in again next time
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+      if (key.startsWith('sb-') && key.includes('-auth-token')) {
+        localStorage.removeItem(key);
+      }
+    });
+  }
+});
+
 // ===================== AUTH HELPERS =====================
 
 async function getUser() {
