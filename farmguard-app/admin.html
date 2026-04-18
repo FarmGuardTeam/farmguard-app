@@ -392,13 +392,33 @@
       if (!confirm('Approve this audit and make the report available to the customer? They will be prompted to pay $29.99 to view it.')) return;
 
       const summary = document.getElementById('execSummary').value.trim();
+
+      // Save summary first
       await supabase.from('audits').update({
         executive_summary: summary,
         status: 'payment_pending',
         report_ready_at: new Date().toISOString()
       }).eq('id', auditId);
 
-      showAlert(document.getElementById('alertArea'), 'success', 'Audit approved! Customer will be notified.');
+      // Generate PDF report
+      showAlert(document.getElementById('alertArea'), 'info', 'Generating PDF report...');
+      try {
+        const pdfRes = await fetch('/api/generate-report', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ audit_id: auditId })
+        });
+        if (pdfRes.ok) {
+          const pdfResult = await pdfRes.json();
+          showAlert(document.getElementById('alertArea'), 'success', 'Audit approved & PDF generated! Customer will be notified.');
+        } else {
+          showAlert(document.getElementById('alertArea'), 'warning', 'Audit approved but PDF generation failed. Customer can still view the web report.');
+        }
+      } catch (pdfErr) {
+        console.error('PDF generation error:', pdfErr);
+        showAlert(document.getElementById('alertArea'), 'warning', 'Audit approved but PDF generation failed. Customer can still view the web report.');
+      }
+
       await loadQueue();
       switchTab('queue');
     }
