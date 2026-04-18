@@ -105,7 +105,10 @@
           <h1 style="font-size:28px; color:var(--green-dark); margin-bottom:4px;">Your Audit Report</h1>
           <p id="reportAuditInfo" style="font-size:15px; color:var(--text-light);"></p>
         </div>
-        <button class="btn btn-outline btn-sm" onclick="window.print()">&#128424; Print Report</button>
+        <div style="display:flex; gap:8px;">
+          <a id="downloadPdfBtn" href="#" target="_blank" class="btn btn-primary btn-sm" style="display:none;">&#128196; Download PDF Report</a>
+          <button class="btn btn-outline btn-sm" onclick="window.print()">&#128424; Print</button>
+        </div>
       </div>
 
       <!-- Executive Summary -->
@@ -281,6 +284,13 @@
       document.getElementById('reportState').style.display = 'block';
       document.getElementById('reportAuditInfo').textContent =
         auditData.audit_id + ' \u2022 ' + (auditData.farm_name || '') + ' \u2022 ' + (auditData.crops || '');
+
+      // Show PDF download button if available
+      if (auditData.pdf_report_url) {
+        const pdfBtn = document.getElementById('downloadPdfBtn');
+        pdfBtn.href = auditData.pdf_report_url;
+        pdfBtn.style.display = 'inline-flex';
+      }
 
       const findings = await getAuditFindings(auditId);
       const documents = await getAuditDocuments(auditId);
