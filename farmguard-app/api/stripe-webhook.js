@@ -94,7 +94,14 @@ export default async function handler(req, res) {
 
     console.log(`Audit ${audit.audit_id} marked as paid and complete.`);
 
-    // 3. Send thank-you email with report link and FRIEND5 promo code
+    // Re-fetch audit to get the latest data including pdf_report_url
+    const updatedAuditRes = await fetch(`${SUPABASE_URL}/rest/v1/audits?id=eq.${auditId}&select=*`, { headers });
+    const updatedAudits = await updatedAuditRes.json();
+    const latestAudit = (updatedAudits && updatedAudits.length > 0) ? updatedAudits[0] : audit;
+
+    console.log(`PDF URL on audit: ${latestAudit.pdf_report_url || 'NOT SET'}`);
+
+    // 3. Send thank-you email with report link, PDF attachment, and FRIEND5 promo code
     if (customerEmail) {
       // Send via our email API endpoint
       try {
@@ -104,7 +111,7 @@ export default async function handler(req, res) {
           body: JSON.stringify({
             to: customerEmail,
             type: 'payment_confirmation',
-            audit: audit
+            audit: latestAudit
           })
         });
         if (emailRes.ok) {
@@ -117,7 +124,7 @@ export default async function handler(req, res) {
       }
 
       // Also store notification in-app
-      await sendInAppNotification(SUPABASE_URL, SUPABASE_SERVICE_KEY, audit);
+      await sendInAppNotification(SUPABASE_URL, SUPABASE_SERVICE_KEY, latestAudit);
     }
 
     return res.status(200).json({ received: true, audit_id: audit.audit_id });
