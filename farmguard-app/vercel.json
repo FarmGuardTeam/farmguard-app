@@ -1,6 +1,14 @@
 {
   "cleanUrls": true,
   "trailingSlash": false,
+  "functions": {
+    "api/analyze.js": {
+      "maxDuration": 120
+    },
+    "api/generate-report.js": {
+      "maxDuration": 60
+    }
+  },
   "headers": [
     {
       "source": "/(.*)",
