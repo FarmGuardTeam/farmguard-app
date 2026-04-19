@@ -96,7 +96,28 @@ export default async function handler(req, res) {
 
     // 3. Send thank-you email with report link and FRIEND5 promo code
     if (customerEmail) {
-      await sendThankYouEmail(SUPABASE_URL, SUPABASE_SERVICE_KEY, customerEmail, audit);
+      // Send via our email API endpoint
+      try {
+        const emailRes = await fetch('https://www.farmguardaudit.com/api/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: customerEmail,
+            type: 'payment_confirmation',
+            audit: audit
+          })
+        });
+        if (emailRes.ok) {
+          console.log(`Thank-you email sent to ${customerEmail}`);
+        } else {
+          console.error('Email send failed:', await emailRes.text());
+        }
+      } catch (emailErr) {
+        console.error('Email error:', emailErr.message);
+      }
+
+      // Also store notification in-app
+      await sendInAppNotification(SUPABASE_URL, SUPABASE_SERVICE_KEY, audit);
     }
 
     return res.status(200).json({ received: true, audit_id: audit.audit_id });
@@ -107,18 +128,9 @@ export default async function handler(req, res) {
   }
 }
 
-// ===================== EMAIL FUNCTION =====================
+// ===================== IN-APP NOTIFICATION =====================
 
-async function sendThankYouEmail(supabaseUrl, serviceKey, email, audit) {
-  // Use Supabase's built-in email (via Auth admin API) or a simple approach
-  // Supabase doesn't have a transactional email API, so we'll use the
-  // Edge Function approach or store the email to send manually.
-  //
-  // For now, we'll use Supabase's auth.admin.generateLink to trigger an email
-  // OR we store email data in a table for a future email service integration.
-  //
-  // SIMPLE APPROACH: Store the thank-you message in a 'notifications' table
-  // that the app can display when the customer next signs in.
+async function sendInAppNotification(supabaseUrl, serviceKey, audit) {
 
   try {
     const headers = {
