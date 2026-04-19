@@ -410,13 +410,37 @@
         });
         if (pdfRes.ok) {
           const pdfResult = await pdfRes.json();
-          showAlert(document.getElementById('alertArea'), 'success', 'Audit approved & PDF generated! Customer will be notified.');
+          showAlert(document.getElementById('alertArea'), 'success', 'PDF generated successfully.');
         } else {
-          showAlert(document.getElementById('alertArea'), 'warning', 'Audit approved but PDF generation failed. Customer can still view the web report.');
+          showAlert(document.getElementById('alertArea'), 'warning', 'PDF generation failed. Customer can still view the web report.');
         }
       } catch (pdfErr) {
         console.error('PDF generation error:', pdfErr);
-        showAlert(document.getElementById('alertArea'), 'warning', 'Audit approved but PDF generation failed. Customer can still view the web report.');
+      }
+
+      // Send "report ready" email to customer
+      try {
+        const audit = await getAudit(auditId);
+        // Get customer email from Supabase auth
+        const { data: userData } = await supabase.auth.admin.getUserById(audit.user_id);
+        const customerEmail = userData?.user?.email;
+
+        if (customerEmail) {
+          showAlert(document.getElementById('alertArea'), 'info', 'Sending notification email...');
+          const emailRes = await fetch('/api/send-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to: customerEmail, type: 'report_ready', audit: audit })
+          });
+          if (emailRes.ok) {
+            showAlert(document.getElementById('alertArea'), 'success', 'Audit approved, PDF generated, and customer notified by email!');
+          }
+        } else {
+          showAlert(document.getElementById('alertArea'), 'success', 'Audit approved & PDF generated! (Could not send email — customer email not found.)');
+        }
+      } catch (emailErr) {
+        console.error('Email notification error:', emailErr);
+        showAlert(document.getElementById('alertArea'), 'success', 'Audit approved & PDF generated! Email notification could not be sent.');
       }
 
       await loadQueue();
