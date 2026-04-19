@@ -3,10 +3,10 @@
   "trailingSlash": false,
   "functions": {
     "api/analyze.js": {
-      "maxDuration": 120
+      "maxDuration": 300
     },
     "api/generate-report.js": {
-      "maxDuration": 60
+      "maxDuration": 120
     }
   },
   "headers": [
