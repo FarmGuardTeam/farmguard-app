@@ -95,6 +95,12 @@
           Pay $29.99 & Unlock Report
         </a>
         <p style="font-size:13px; opacity:0.6; margin-top:12px;">Secure payment via Stripe. Your report is available instantly after payment.</p>
+        <div style="margin-top:20px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.2);">
+          <p style="font-size:14px; opacity:0.8; margin-bottom:8px;">Already paid?</p>
+          <button class="btn btn-outline btn-sm" onclick="checkPaymentStatus()" id="checkPaymentBtn" style="color:white; border-color:rgba(255,255,255,0.4);">
+            Refresh Payment Status
+          </button>
+        </div>
       </div>
     </div>
 
@@ -161,8 +167,8 @@
     const params = new URLSearchParams(window.location.search);
     auditId = params.get('audit');
 
-    // Check if returning from Stripe payment
-    const paymentSuccess = params.get('payment') === 'success';
+    // Check if returning from Stripe payment (multiple detection methods)
+    const paymentSuccess = params.get('payment') === 'success' || params.has('checkout_session_id');
 
     async function init() {
       currentUser = await requireAuth();
@@ -178,23 +184,27 @@
         return;
       }
 
-      // Handle Stripe redirect
-      if (paymentSuccess && auditData.status === 'payment_pending') {
-        await updateAuditStatus(auditId, 'complete');
+      // Handle Stripe redirect — mark as paid if coming back from payment
+      if (paymentSuccess && (auditData.status === 'payment_pending' || !auditData.paid)) {
+        await supabase.from('audits').update({
+          paid: true,
+          paid_at: new Date().toISOString(),
+          status: 'complete',
+          updated_at: new Date().toISOString()
+        }).eq('id', auditId);
         auditData.status = 'complete';
-        // Update payment record
-        await supabase.from('audits').update({ paid: true, paid_at: new Date().toISOString() }).eq('id', auditId);
+        auditData.paid = true;
       }
 
       document.getElementById('loadingState').style.display = 'none';
 
       const status = auditData.status;
 
-      if (status === 'complete' || (status === 'payment_pending' && auditData.paid)) {
+      if (status === 'complete' || auditData.paid) {
         // Show full report
         await showFullReport();
       } else if (status === 'payment_pending' || status === 'report_ready') {
-        // Show payment gate
+        // Show payment gate with "Already paid?" refresh option
         showPaymentGate();
       } else {
         // In progress
@@ -228,6 +238,37 @@
         } else {
           dot.className = 'wizard-dot pending';
         }
+      }
+    }
+
+    async function checkPaymentStatus() {
+      const btn = document.getElementById('checkPaymentBtn');
+      btn.disabled = true;
+      btn.textContent = 'Checking...';
+
+      try {
+        // Re-fetch the audit to see if webhook or another process marked it as paid
+        const { data: freshAudit, error } = await supabase
+          .from('audits')
+          .select('*')
+          .eq('id', auditId)
+          .single();
+
+        if (freshAudit && (freshAudit.paid || freshAudit.status === 'complete')) {
+          auditData = freshAudit;
+          document.getElementById('paymentState').style.display = 'none';
+          await showFullReport();
+          return;
+        }
+
+        // If still not showing as paid, show a helpful message
+        showAlert(document.getElementById('alertArea'), 'warning',
+          'Payment not detected yet. It can take a minute to process. If you just paid, try refreshing again in 30 seconds. If the issue persists, contact us at support@farmguardaudit.com.');
+      } catch (err) {
+        showAlert(document.getElementById('alertArea'), 'error', 'Error checking status: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Refresh Payment Status';
       }
     }
 
