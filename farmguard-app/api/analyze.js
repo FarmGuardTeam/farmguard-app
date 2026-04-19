@@ -70,6 +70,11 @@ export default async function handler(req, res) {
 
     // Add visual documents for analysis (images + PDFs)
     // Prioritize Schedule of Insurance and APH docs first, then other policy documents
+    // Cap at 5MB per document and 20MB total to avoid timeouts
+    const MAX_DOC_SIZE = 5 * 1024 * 1024; // 5MB per document
+    const MAX_TOTAL_SIZE = 20 * 1024 * 1024; // 20MB total
+    let totalDocSize = 0;
+
     visualDocuments.sort((a, b) => {
       const priority = (name) => {
         const n = name.toLowerCase();
@@ -79,12 +84,31 @@ export default async function handler(req, res) {
       };
       return priority(a.file_name) - priority(b.file_name);
     });
+
+    let docsLoaded = 0;
     for (const doc of visualDocuments.slice(0, 10)) {
       try {
         const docUrl = `${SUPABASE_URL}/storage/v1/object/public/policy-documents/${doc.file_path}`;
         const docRes = await fetch(docUrl);
         if (docRes.ok) {
           const buffer = await docRes.arrayBuffer();
+
+          // Skip documents that are too large or would exceed total limit
+          if (buffer.byteLength > MAX_DOC_SIZE) {
+            console.log(`Skipping ${doc.file_name} — ${(buffer.byteLength / 1024 / 1024).toFixed(1)}MB exceeds 5MB limit`);
+            contentBlocks.push({
+              type: 'text',
+              text: `Note: Document "${doc.file_name}" was too large to process directly (${(buffer.byteLength / 1024 / 1024).toFixed(1)}MB). Include a finding noting this document should be reviewed manually.`
+            });
+            continue;
+          }
+          if (totalDocSize + buffer.byteLength > MAX_TOTAL_SIZE) {
+            console.log(`Skipping ${doc.file_name} — would exceed 20MB total document limit`);
+            continue;
+          }
+
+          totalDocSize += buffer.byteLength;
+          docsLoaded++;
           const base64 = Buffer.from(buffer).toString('base64');
 
           const isPdf = doc.file_name.match(/\.pdf$/i);
@@ -93,7 +117,6 @@ export default async function handler(req, res) {
             : 'image/jpeg';
 
           if (isPdf) {
-            // Claude supports PDF documents via the document source type
             contentBlocks.push({
               type: 'document',
               source: { type: 'base64', media_type: 'application/pdf', data: base64 }
@@ -122,8 +145,14 @@ export default async function handler(req, res) {
       }
     }
 
-    // 5. Call Claude API
+    console.log(`Loaded ${docsLoaded} documents (${(totalDocSize / 1024 / 1024).toFixed(1)}MB total) for analysis`);
+
+    // 5. Call Claude API with AbortController timeout (240s safety net)
+    const controller = new AbortController();
+    const apiTimeout = setTimeout(() => controller.abort(), 240000);
+
     const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+      signal: controller.signal,
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -139,6 +168,8 @@ export default async function handler(req, res) {
         }]
       })
     });
+
+    clearTimeout(apiTimeout);
 
     if (!claudeRes.ok) {
       const errText = await claudeRes.text();
