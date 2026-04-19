@@ -69,7 +69,16 @@ export default async function handler(req, res) {
     });
 
     // Add visual documents for analysis (images + PDFs)
-    // Schedule of Insurance and APH records can be multi-page, so allow up to 10 documents
+    // Prioritize Schedule of Insurance and APH docs first, then other policy documents
+    visualDocuments.sort((a, b) => {
+      const priority = (name) => {
+        const n = name.toLowerCase();
+        if (n.includes('schedule')) return 0;
+        if (n.includes('aph') || n.includes('yield') || n.includes('production')) return 1;
+        return 2;
+      };
+      return priority(a.file_name) - priority(b.file_name);
+    });
     for (const doc of visualDocuments.slice(0, 10)) {
       try {
         const docUrl = `${SUPABASE_URL}/storage/v1/object/public/policy-documents/${doc.file_path}`;
