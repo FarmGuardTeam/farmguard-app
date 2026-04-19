@@ -1,6 +1,7 @@
 // Vercel Serverless Function: Send Email via Resend
 // Sends transactional emails (thank-you after payment, report ready, etc.)
 // Uses Resend API (https://resend.com) — free tier: 100 emails/month
+// Supports PDF attachment when audit has a pdf_report_url
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -31,18 +32,47 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Unknown email type: ' + type });
     }
 
+    // Build email payload
+    const emailPayload = {
+      from: 'FarmGuard <noreply@farmguardaudit.com>',
+      to: [to],
+      subject: subject,
+      html: html
+    };
+
+    // Attach PDF report if available (for payment_confirmation emails)
+    if (type === 'payment_confirmation' && audit?.pdf_report_url) {
+      try {
+        console.log('Fetching PDF for email attachment:', audit.pdf_report_url);
+        const pdfRes = await fetch(audit.pdf_report_url);
+        if (pdfRes.ok) {
+          const pdfBuffer = Buffer.from(await pdfRes.arrayBuffer());
+          const pdfBase64 = pdfBuffer.toString('base64');
+          const fileName = `FarmGuard-Report-${audit.audit_id || 'Audit'}.pdf`;
+
+          emailPayload.attachments = [
+            {
+              filename: fileName,
+              content: pdfBase64
+            }
+          ];
+          console.log(`PDF attached: ${fileName} (${(pdfBuffer.length / 1024).toFixed(0)}KB)`);
+        } else {
+          console.error('Failed to fetch PDF for attachment:', pdfRes.status);
+        }
+      } catch (pdfErr) {
+        console.error('PDF attachment error:', pdfErr.message);
+        // Continue sending email without attachment
+      }
+    }
+
     const emailRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${RESEND_API_KEY}`
       },
-      body: JSON.stringify({
-        from: 'FarmGuard <noreply@farmguardaudit.com>',
-        to: [to],
-        subject: subject,
-        html: html
-      })
+      body: JSON.stringify(emailPayload)
     });
 
     if (!emailRes.ok) {
