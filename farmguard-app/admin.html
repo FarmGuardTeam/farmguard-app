@@ -22,6 +22,64 @@
     .impact-banner { display: flex; align-items: center; gap: 16px; padding: 16px 20px; background: linear-gradient(135deg, var(--green-dark), var(--green-mid)); color: white; border-radius: 8px; margin-bottom: 16px; }
     .impact-banner .impact-number { font-size: 28px; font-weight: 800; }
     .impact-banner .impact-label { font-size: 14px; opacity: 0.9; }
+
+    /* AI Analysis Progress Tracker */
+    .analysis-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.55); z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .analysis-modal {
+      background: #fff; border-radius: 12px; padding: 32px 36px;
+      max-width: 520px; width: 90%; box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+    }
+    .analysis-modal h3 {
+      font-size: 20px; color: var(--green-dark); margin: 0 0 4px; display: flex; align-items: center; gap: 10px;
+    }
+    .analysis-modal .subtitle { font-size: 14px; color: var(--text-light); margin: 0 0 20px; }
+    .progress-track {
+      width: 100%; height: 14px; background: #E8E8E4; border-radius: 7px; overflow: hidden; margin-bottom: 6px;
+    }
+    .progress-fill {
+      height: 100%; width: 0%; border-radius: 7px;
+      background: linear-gradient(90deg, #4A7C23, #6BAF3A);
+      transition: width 0.6s ease;
+    }
+    .progress-pct {
+      font-size: 13px; font-weight: 700; color: var(--green-dark); text-align: right; margin-bottom: 18px;
+    }
+    .step-list { list-style: none; padding: 0; margin: 0; }
+    .step-list li {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 0; font-size: 14px; color: var(--text-light);
+      border-bottom: 1px solid #F0F0EC;
+    }
+    .step-list li:last-child { border-bottom: none; }
+    .step-list li .step-icon {
+      width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 12px; flex-shrink: 0; border: 2px solid #D0D0CC; color: #D0D0CC; background: #fff;
+    }
+    .step-list li.active { color: var(--green-dark); font-weight: 600; }
+    .step-list li.active .step-icon {
+      border-color: var(--green-mid); color: var(--green-mid); background: #F0F7EC;
+      animation: pulse-icon 1.2s ease-in-out infinite;
+    }
+    .step-list li.done { color: var(--text-mid); }
+    .step-list li.done .step-icon {
+      border-color: var(--green-mid); background: var(--green-mid); color: #fff;
+    }
+    @keyframes pulse-icon {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(74,124,35,0.3); }
+      50% { box-shadow: 0 0 0 6px rgba(74,124,35,0); }
+    }
+    .analysis-error { color: #D32F2F; font-size: 14px; margin-top: 12px; font-weight: 500; }
+    .analysis-result {
+      margin-top: 16px; padding: 16px; border-radius: 8px;
+      background: linear-gradient(135deg, var(--green-dark), var(--green-mid));
+      color: #fff; text-align: center;
+    }
+    .analysis-result .result-number { font-size: 28px; font-weight: 800; }
+    .analysis-result .result-label { font-size: 13px; opacity: 0.9; }
   </style>
 </head>
 <body>
@@ -331,24 +389,171 @@
       window.open(url, '_blank');
     }
 
+    // ===================== AI ANALYSIS WITH PROGRESS TRACKER =====================
+
+    const ANALYSIS_STEPS = [
+      { id: 'upload', label: 'Preparing documents for review', duration: 3000 },
+      { id: 'schedule', label: 'Reviewing Schedule of Insurance line by line', duration: 12000 },
+      { id: 'practice', label: 'Verifying practice codes & unit structure', duration: 10000 },
+      { id: 'aph', label: 'Auditing APH yields & checking for T-yields', duration: 12000 },
+      { id: 'ye', label: 'Checking Yield Exclusion eligibility', duration: 8000 },
+      { id: 'cost', label: 'Calculating dollar impact for each finding', duration: 8000 },
+      { id: 'scripts', label: 'Drafting agent conversation scripts', duration: 6000 },
+      { id: 'summary', label: 'Writing executive summary', duration: 5000 },
+    ];
+
+    function showAnalysisProgress() {
+      // Remove existing overlay if present
+      const existing = document.getElementById('analysisOverlay');
+      if (existing) existing.remove();
+
+      const overlay = document.createElement('div');
+      overlay.className = 'analysis-overlay';
+      overlay.id = 'analysisOverlay';
+      overlay.innerHTML = `
+        <div class="analysis-modal">
+          <h3><span id="analysisSpinner" style="display:inline-block; width:22px; height:22px; border:3px solid #E8E8E4; border-top-color:var(--green-mid); border-radius:50%; animation:spin 0.8s linear infinite;"></span> AI Analysis in Progress</h3>
+          <p class="subtitle" id="analysisSubtitle">Reviewing your policy documents — this usually takes 60–90 seconds.</p>
+          <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+          <div class="progress-pct" id="progressPct">0%</div>
+          <ul class="step-list" id="stepList">
+            ${ANALYSIS_STEPS.map((s, i) => `
+              <li id="step-${s.id}" class="${i === 0 ? 'active' : ''}">
+                <span class="step-icon">${i === 0 ? '&#9679;' : (i + 1)}</span>
+                <span>${s.label}</span>
+              </li>
+            `).join('')}
+          </ul>
+          <div id="analysisResultArea"></div>
+        </div>
+      `;
+      // Add spin keyframes if not already present
+      if (!document.getElementById('spinKeyframes')) {
+        const style = document.createElement('style');
+        style.id = 'spinKeyframes';
+        style.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
+        document.head.appendChild(style);
+      }
+      document.body.appendChild(overlay);
+    }
+
+    function advanceStep(stepIndex, percent) {
+      const fill = document.getElementById('progressFill');
+      const pct = document.getElementById('progressPct');
+      if (fill) fill.style.width = percent + '%';
+      if (pct) pct.textContent = Math.round(percent) + '%';
+
+      ANALYSIS_STEPS.forEach((s, i) => {
+        const li = document.getElementById('step-' + s.id);
+        if (!li) return;
+        if (i < stepIndex) {
+          li.className = 'done';
+          li.querySelector('.step-icon').innerHTML = '&#10003;';
+        } else if (i === stepIndex) {
+          li.className = 'active';
+          li.querySelector('.step-icon').innerHTML = '&#9679;';
+        } else {
+          li.className = '';
+          li.querySelector('.step-icon').innerHTML = (i + 1);
+        }
+      });
+    }
+
+    function showAnalysisComplete(result) {
+      // Mark all steps done
+      advanceStep(ANALYSIS_STEPS.length, 100);
+
+      const spinner = document.getElementById('analysisSpinner');
+      if (spinner) spinner.outerHTML = '<span style="font-size:22px;">&#9989;</span>';
+
+      const subtitle = document.getElementById('analysisSubtitle');
+      if (subtitle) subtitle.textContent = 'Analysis complete — review the findings below.';
+
+      const area = document.getElementById('analysisResultArea');
+      if (area) {
+        area.innerHTML = `
+          <div class="analysis-result">
+            <div class="result-number">${result.findings_count || 0} Findings</div>
+            <div class="result-label">${result.total_impact ? 'Estimated Impact: $' + result.total_impact.toLocaleString() : 'Review findings below'}${result.has_summary ? ' &middot; Executive summary drafted' : ''}</div>
+          </div>
+          <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="document.getElementById('analysisOverlay').remove();">Review Findings</button>
+        `;
+      }
+    }
+
+    function showAnalysisError(message) {
+      const spinner = document.getElementById('analysisSpinner');
+      if (spinner) spinner.outerHTML = '<span style="font-size:22px;">&#10060;</span>';
+
+      const subtitle = document.getElementById('analysisSubtitle');
+      if (subtitle) subtitle.textContent = 'Analysis encountered an error.';
+
+      const area = document.getElementById('analysisResultArea');
+      if (area) {
+        area.innerHTML = `
+          <div class="analysis-error">&#9888; ${message}</div>
+          <button class="btn btn-outline btn-block" style="margin-top:14px;" onclick="document.getElementById('analysisOverlay').remove();">Close</button>
+        `;
+      }
+    }
+
     async function runAIAnalysis(auditId) {
-      showAlert(document.getElementById('alertArea'), 'info', 'AI analysis started. This may take a minute...');
+      showAnalysisProgress();
+
+      // Start simulated step progression (advances visually while the API works)
+      let currentStep = 0;
+      const totalDuration = ANALYSIS_STEPS.reduce((s, step) => s + step.duration, 0);
+      let elapsed = 0;
+
+      const stepTimer = setInterval(() => {
+        if (currentStep >= ANALYSIS_STEPS.length - 1) {
+          clearInterval(stepTimer);
+          return;
+        }
+        elapsed += 500;
+        // Calculate cumulative time through steps
+        let cumulative = 0;
+        for (let i = 0; i <= currentStep; i++) cumulative += ANALYSIS_STEPS[i].duration;
+
+        if (elapsed >= cumulative) {
+          currentStep++;
+          const pct = Math.min((elapsed / totalDuration) * 95, 95); // Cap at 95% until real response
+          advanceStep(currentStep, pct);
+        } else {
+          // Smooth progress within current step
+          const stepStart = cumulative - ANALYSIS_STEPS[currentStep].duration;
+          const stepProgress = (elapsed - stepStart) / ANALYSIS_STEPS[currentStep].duration;
+          const basePercent = (stepStart / totalDuration) * 95;
+          const stepPercent = (ANALYSIS_STEPS[currentStep].duration / totalDuration) * 95 * stepProgress;
+          advanceStep(currentStep, basePercent + stepPercent);
+        }
+      }, 500);
+
       try {
         await updateAuditStatus(auditId, 'ai_analysis');
-        // Call the AI analysis API endpoint
+
         const response = await fetch('/api/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ audit_id: auditId })
         });
-        if (!response.ok) throw new Error('AI analysis failed');
+
+        clearInterval(stepTimer);
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.error || 'AI analysis failed (status ' + response.status + ')');
+        }
+
         const result = await response.json();
-        const impactMsg = result.total_impact ? ` Estimated impact: $${result.total_impact.toLocaleString()}.` : '';
-        const summaryMsg = result.has_summary ? ' Executive summary drafted.' : '';
-        showAlert(document.getElementById('alertArea'), 'success', `AI analysis complete. ${result.findings_count || 0} findings generated.${impactMsg}${summaryMsg}`);
+        showAnalysisComplete(result);
+
+        // Reload the review panel in the background
         await openReview(auditId);
+
       } catch (err) {
-        showAlert(document.getElementById('alertArea'), 'error', 'AI analysis error: ' + err.message);
+        clearInterval(stepTimer);
+        showAnalysisError(err.message);
       }
     }
 
