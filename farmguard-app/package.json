@@ -13,5 +13,8 @@
   "dependencies": {
     "pdfkit": "^0.15.0",
     "resend": "^4.0.0"
+  },
+  "overrides": {
+    "jpeg-exif": "npm:jpeg-js@0.4.4"
   }
 }
