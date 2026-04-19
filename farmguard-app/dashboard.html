@@ -183,17 +183,37 @@
 
       listEl.style.display = 'block';
       emptyEl.style.display = 'none';
-      listEl.innerHTML = audits.map(audit => `
-        <div class="audit-queue-item" style="cursor:pointer;" onclick="goToAudit('${audit.id}', '${audit.status}')">
-          <div class="queue-info">
-            <h4>${audit.farm_name || 'Policy Audit'} <span style="font-weight:400; color:var(--text-light); font-size:13px;">${audit.audit_id}</span></h4>
-            <p>${audit.crops || 'Crops not specified'} &middot; ${audit.acres ? audit.acres + ' acres' : ''} &middot; Started ${formatDate(audit.created_at)}</p>
-          </div>
-          <div class="queue-actions">
-            <span class="badge ${statusBadgeClass(audit.status)}">${statusLabel(audit.status)}</span>
-          </div>
-        </div>
-      `).join('');
+      listEl.innerHTML = audits.map(audit => {
+        const isComplete = audit.status === 'complete' || audit.paid;
+        const isPaying = audit.status === 'payment_pending';
+
+        let actionButtons = '';
+        if (isComplete) {
+          actionButtons = `
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <a href="/report.html?audit=${audit.id}" class="btn btn-primary btn-sm" onclick="event.stopPropagation();">View Report</a>
+              ${audit.pdf_report_url ? `<a href="${audit.pdf_report_url}" target="_blank" class="btn btn-outline btn-sm" onclick="event.stopPropagation();">&#128196; Download PDF</a>` : ''}
+            </div>`;
+        } else if (isPaying) {
+          actionButtons = `
+            <a href="/report.html?audit=${audit.id}" class="btn btn-gold btn-sm" onclick="event.stopPropagation();">Pay & Unlock</a>`;
+        } else {
+          actionButtons = `
+            <span class="badge ${statusBadgeClass(audit.status)}">${statusLabel(audit.status)}</span>`;
+        }
+
+        return `
+          <div class="audit-queue-item" style="cursor:pointer;" onclick="goToAudit('${audit.id}', '${audit.status}')">
+            <div class="queue-info">
+              <h4>${audit.farm_name || 'Policy Audit'} <span style="font-weight:400; color:var(--text-light); font-size:13px;">${audit.audit_id}</span></h4>
+              <p>${audit.crops || 'Crops not specified'} &middot; ${audit.acres ? audit.acres + ' acres' : ''} &middot; Started ${formatDate(audit.created_at)}
+              ${isComplete ? ' &middot; <span style="color:var(--green-mid); font-weight:600;">Complete</span>' : ''}</p>
+            </div>
+            <div class="queue-actions">
+              ${actionButtons}
+            </div>
+          </div>`;
+      }).join('');
     }
 
     function goToAudit(auditId, status) {
